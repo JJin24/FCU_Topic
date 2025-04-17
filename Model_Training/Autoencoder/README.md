@@ -7,6 +7,4 @@
 
 ## 紀錄填寫
 
-請在 [HackMD](https://hackmd.io/@imdog/Model-Training-Logs) 及 git commit 撰寫在這次編輯中，主要修改那一些項目。
-
-而結果，預期將會在今日 (4/15) 稍晚才會找出一個好的作法當作未來的標準，敬請見諒。
+請在 [HackMD](https://hackmd.io/@imdog/Model-Training-Logs)、[問卷](https://forms.office.com/r/KUCsX3erLL) 及 git commit 撰寫在這次編輯中，主要修改那一些項目。
