@@ -128,14 +128,12 @@ int main(int argc, char *argv[]) {
     int n_packets = atoi(argv[3]);
     int n_bytes = atoi(argv[4]);
 
-    // ================== 主要修改處 ==================
     // 檢查並建立輸出資料夾
     printf("Checking and creating output directory: %s\n", output_folder);
     if (create_directories(output_folder) != 0) {
         fprintf(stderr, "Error: Could not create output directory '%s'.\n", output_folder);
         return 1; // 建立失敗，結束程式
     }
-    // ===============================================
 
     DIR *input_dir = opendir(input_folder);
     if (!input_dir) {
@@ -144,6 +142,7 @@ int main(int argc, char *argv[]) {
     }
     struct dirent *entry;
     char source_filepath[PATH_MAX];
+    int deal_pkt = 0; // 用來計算處理的 packet 數量
     while ((entry = readdir(input_dir)) != NULL) {
         if (strstr(entry->d_name, ".pcap")) {
             snprintf(source_filepath, sizeof(source_filepath), "%s/%s", input_folder, entry->d_name);
@@ -167,8 +166,9 @@ int main(int argc, char *argv[]) {
                 free((void*)pkt_arr[i]);
             }
         }
+        if (deal_pkt % 100 == 0) printf("Total %d packets\n", deal_pkt);
     }
     closedir(input_dir);
-    printf("Processing complete.\n");
+    printf("Processing complete. Total process %d packets\n", deal_pkt);
     return 0;
 }
