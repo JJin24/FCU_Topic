@@ -5,14 +5,14 @@ CFLAGS=-Wall -Wextra -O3
 LDFLAGS=-lpcap
 
 # 預設目標 'all' 依賴於我們的最終執行檔
-all: Flow2NMinmg
+all: Flow2NMimg
 
-# 執行檔 'Flow2NMinmg' 依賴於來源檔 'Flow2NMinmg.c'
-Flow2NMinmg: Flow2NMinmg.c
+# 執行檔 'Flow2NMimg' 依賴於來源檔 'Flow2NMimg.c'
+Flow2NMimg: Flow2NMimg.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # 'clean' 目標，用於清除編譯產生的檔案
 clean:
-	rm -f Flow2NMinmg
+	rm -f Flow2NMimg
 
 .PHONY: all clean
