@@ -54,7 +54,6 @@ int create_directories(const char *path) {
     return 0;
 }
 
-
 // 從 pcap 檔案中擷取前 n 個 packet，回傳 packet 指標陣列及實際數量
 int extract_n_packets_from_pcap(const char *pcap_filename, int n, const uint8_t **pkt_arr, int *pkt_lens) {
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -166,7 +165,7 @@ int main(int argc, char *argv[]) {
                 free((void*)pkt_arr[i]);
             }
         }
-        if (deal_pkt % 100 == 0) printf("Total %d packets\n", deal_pkt);
+        if (deal_pkt++ % 1000 == 0) printf("Process %d packets\r", deal_pkt - 1);
     }
     closedir(input_dir);
     printf("Processing complete. Total process %d packets\n", deal_pkt);
