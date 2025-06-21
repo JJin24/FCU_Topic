@@ -5,7 +5,55 @@
 #include <dirent.h>
 #include <limits.h>
 
+// 為建立資料夾新增的標頭檔
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
+
 #define MAX_PKT_NUM 2048 // 可根據需求調整
+
+/**
+ * @brief 遞迴地建立資料夾，類似於 `mkdir -p`
+ * 
+ * @param path 要建立的資料夾路徑 (可以是相對或絕對路徑)
+ * @return int 0 代表成功, -1 代表失敗
+ */
+int create_directories(const char *path) {
+    char tmp[PATH_MAX];
+    char *p = NULL;
+    size_t len;
+
+    // 複製路徑字串，因為我們需要修改它
+    snprintf(tmp, sizeof(tmp),"%s", path);
+    len = strlen(tmp);
+
+    // 如果路徑以 '/' 結尾，先移除它
+    if (len > 1 && tmp[len - 1] == '/') {
+        tmp[len - 1] = 0;
+    }
+
+    // 逐層建立資料夾
+    for (p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = 0; // 暫時將 '/' 替換為字串結束符
+            // 嘗試建立該層的資料夾
+            if (mkdir(tmp, 0755) != 0 && errno != EEXIST) {
+                perror("mkdir");
+                return -1;
+            }
+            *p = '/'; // 還原 '/'
+        }
+    }
+
+    // 建立最後一層資料夾
+    if (mkdir(tmp, 0755) != 0 && errno != EEXIST) {
+        perror("mkdir");
+        return -1;
+    }
+
+    return 0;
+}
+
 
 // 從 pcap 檔案中擷取前 n 個 packet，回傳 packet 指標陣列及實際數量
 int extract_n_packets_from_pcap(const char *pcap_filename, int n, const uint8_t **pkt_arr, int *pkt_lens) {
@@ -28,17 +76,20 @@ int extract_n_packets_from_pcap(const char *pcap_filename, int n, const uint8_t 
     return count;
 }
 
-uint8_t* get_n_byte_from_pkt(int n, const uint8_t *pkt) {
+uint8_t* get_n_byte_from_pkt(int n, const uint8_t *pkt, int pkt_len) {
     uint8_t *n_byte_data = malloc(n);
     if (!n_byte_data) {
         fprintf(stderr, "Memory allocation failed\n");
         return NULL;
     }
-    memcpy(n_byte_data, pkt, n);
+    
+    // 決定要複製的實際長度
+    int copy_len = (pkt_len < n) ? pkt_len : n;
+    memcpy(n_byte_data, pkt, copy_len);
 
     // 如果 packet 長度小於 n，則填充剩餘部分為 0
-    for (int i = strlen((const char*)pkt); i < n; ++i) {
-        n_byte_data[i] = 0; // 填充為 0
+    if (copy_len < n) {
+        memset(n_byte_data + copy_len, 0, n - copy_len);
     }
 
     return n_byte_data;
@@ -77,9 +128,18 @@ int main(int argc, char *argv[]) {
     int n_packets = atoi(argv[3]);
     int n_bytes = atoi(argv[4]);
 
+    // ================== 主要修改處 ==================
+    // 檢查並建立輸出資料夾
+    printf("Checking and creating output directory: %s\n", output_folder);
+    if (create_directories(output_folder) != 0) {
+        fprintf(stderr, "Error: Could not create output directory '%s'.\n", output_folder);
+        return 1; // 建立失敗，結束程式
+    }
+    // ===============================================
+
     DIR *input_dir = opendir(input_folder);
     if (!input_dir) {
-        perror("opendir");
+        perror("opendir (input)");
         return 1;
     }
     struct dirent *entry;
@@ -90,15 +150,18 @@ int main(int argc, char *argv[]) {
             const uint8_t *pkt_arr[MAX_PKT_NUM];
             int pkt_lens[MAX_PKT_NUM];
             int pkt_count = extract_n_packets_from_pcap(source_filepath, n_packets, pkt_arr, pkt_lens);
+            
             for (int i = 0; i < pkt_count; ++i) {
-                int extract_len = n_bytes < pkt_lens[i] ? n_bytes : pkt_lens[i];
-                uint8_t *n_byte_data = get_n_byte_from_pkt(extract_len, pkt_arr[i]);
-                unsigned char image[256][extract_len];
-                bytes_to_onehot_image(n_byte_data, extract_len, image);
+                // 注意：這裡直接傳入 n_bytes，讓 get_n_byte_from_pkt 內部處理長度與填充
+                uint8_t *n_byte_data = get_n_byte_from_pkt(n_bytes, pkt_arr[i], pkt_lens[i]);
+                if (!n_byte_data) continue; // 如果記憶體分配失敗則跳過
 
-                char output_img_path_and_name[512];
+                unsigned char image[256][n_bytes];
+                bytes_to_onehot_image(n_byte_data, n_bytes, image);
+
+                char output_img_path_and_name[PATH_MAX];
                 snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s_pkt%d.pgm", output_folder, entry->d_name, i);
-                save_image_pgm(output_img_path_and_name, extract_len, image);
+                save_image_pgm(output_img_path_and_name, n_bytes, image);
 
                 free(n_byte_data);
                 free((void*)pkt_arr[i]);
@@ -106,5 +169,6 @@ int main(int argc, char *argv[]) {
         }
     }
     closedir(input_dir);
+    printf("Processing complete.\n");
     return 0;
 }
