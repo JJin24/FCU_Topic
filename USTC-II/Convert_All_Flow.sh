@@ -1,34 +1,121 @@
 #!/bin/bash
 # Program:
-#   This script will convert all the flow files (.pcap) in the input directory
-#   to the output directory with the specified conversion tool.
-# Usage:
-#   ./Convert_All_Flow.sh <input_directory> <output_directory> <n_pkt> <m_byte>
+#   This script iterates through subdirectories of a given input folder,
+#   and converts all flow files (.pcap) within each subdirectory to a 
+#   corresponding subdirectory in the output folder.
+# Gemini 更動調整，避免壟餘的程式碼，並增加錯誤處理。
 
-convert_tool="" # 替換為實際的轉換工具路徑
+# --- Configuration ---
+# The path to the conversion tool
+convert_tool="./Flow2img" 
 
-input_top_folder=$1
-output_top_folder=$2
-n_pkt=$3
-m_byte=$4
+n_pkt="6"
+m_byte="100"
 
-if [ -z "$input_top_folder" ] || [ -z "$output_top_folder" ] || [ -z "$n_pkt" ] || [ -z "$m_byte" ]; then
-    echo "Usage: $0 <input_directory> <output_directory> <n_pkt> <m_byte>"
+# set -e: Exit immediately if a command exits with a non-zero status.
+# set -u: Treat unset variables as an error when substituting.
+# set -o pipefail: The return value of a pipeline is the status of the last command 
+#                  to exit with a non-zero status, or zero if no command exited
+#                  with a non-zero status.
+set -euo pipefail
+
+# --- Functions ---
+# Function to display usage information
+usage() {
+    echo "Usage: $0 [option] <input_top_folder> <output_top_folder>"
+    echo "This script converts .pcap files in subdirectories of <input_top_folder> to <output_top_folder>."
+    echo ""
+    echo "Options:"
+    echo "  -f, --flow, -1, --hast-1, HAST-I    Use HAST-I conversion (flow-based)."
+    echo "  -p, --packet, -2, --hast-2, HAST-II Use HAST-II conversion (packet-based)."
+    echo "  -h, --help                          Display this help message."
+    echo ""
+    echo "Example:"
+    echo "  $0 -1 ./my_pcaps ./my_images"
+}
+
+# --- Main Script Logic ---
+
+# Check if -h or --help is passed
+if [[ "${1-}" == "-h" || "${1-}" == "--help" ]]; then
+    # If the tool has its own help, show it. Otherwise, show our usage.
+    if [[ -x "$convert_tool" ]]; then
+        "$convert_tool" -h
+    else
+        echo "Conversion tool '$convert_tool' not found or not executable."
+        echo ""
+        usage
+    fi
+    exit 0
+fi
+
+# Check for the correct number of arguments
+if [[ $# -ne 3 ]]; then
+    echo "Error: Invalid number of arguments."
+    usage
     exit 1
 fi
 
-# 原始這邊是使用 ls -d 來列出下面的子目錄，但如果遇到 " " 的話
-# 參數就會有問題，丟給 Gemini 後，它提供下面的方式來得到子目錄的名稱
-# 使用 find 命令來列出所有子目錄 (只會找到一層深度的目錄)。接著透過
-# 管道將每個子目錄的路徑傳遞給 while 迴圈進行處理。
-find "$input_top_folder" -mindepth 1 -maxdepth 1 -type d | while read -r input_folder; do
-    # 從完整路徑中提取子目錄名稱
-    gci=$(basename "$input_folder")
-    
-    output_folder="$output_top_folder/$gci"
-    
-    mkdir -p "$output_folder"
-    
-    $convert_tool "$input_folder" "$output_folder" "$n_pkt" "$m_byte"
+# Assign arguments to variables for clarity
+option="$1"
+input_top_folder="$2"
+output_top_folder="$3"
 
+# Validate that the input directory exists
+if [[ ! -d "$input_top_folder" ]]; then
+    echo "Error: Input directory '$input_top_folder' does not exist."
+    exit 1
+fi
+
+# Validate that the conversion tool exists and is executable
+if [[ ! -x "$convert_tool" ]]; then
+    echo "Error: Conversion tool '$convert_tool' not found or not executable."
+    exit 1
+fi
+
+# Determine the arguments for the conversion tool based on the option
+case "$option" in
+    -f|--flow|-1|--hast-1|"HAST-I")
+        echo "Mode: HAST-I (flow-based) selected."
+        # The `find` loop will handle the rest of the arguments
+        ;;
+    -p|--packet|-2|--hast-2|"HAST-II")
+        echo "Mode: HAST-II (packet-based) selected."
+        # The `find` loop will handle the rest of the arguments
+        ;;
+    *)
+        echo "Error: Invalid option '$option'."
+        usage
+        exit 1
+        ;;
+esac
+
+echo "Input directory:  $input_top_folder"
+echo "Output directory: $output_top_folder"
+echo "---"
+
+# Find all immediate subdirectories in the input folder and process them
+# The `find ... | while read` structure is excellent for handling names
+# with spaces or special characters correctly.
+find "$input_top_folder" -mindepth 1 -maxdepth 1 -type d | while read -r input_subdir; do
+    # Extract the base name of the subdirectory (e.g., "Test" from "./123/Test")
+    subdir_name=$(basename "$input_subdir")
+    
+    # Construct the corresponding output subdirectory path
+    output_subdir="$output_top_folder/$subdir_name"
+    
+    echo "Processing: '$input_subdir' -> '$output_subdir'"
+    
+    # Create the output subdirectory, -p ensures it doesn't fail if it already exists
+    mkdir -p "$output_subdir"
+    
+    # Execute the conversion tool with the correct arguments for the chosen mode
+    if [[ "$option" == "-f" || "$option" == "--flow" || "$option" == "-1" || "$option" == "--hast-1" || "$option" == "HAST-I" ]]; then
+        "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$m_byte"
+    else # HAST-II mode
+        "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$n_pkt" "$m_byte"
+    fi
 done
+
+echo "---"
+echo "Conversion complete."
