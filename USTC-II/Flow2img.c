@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #define MAX_PKT_NUM 2048 // 可根據需求調整
+//#define DEBUG
 
 /**
  * @brief 遞迴地建立資料夾，類似於 `mkdir -p`
@@ -56,17 +57,29 @@ int create_directories(const char *path) {
 
 /*
  * 從 pcap 檔案中擷取前 n 個 packet，回傳 packet 指標陣列及實際數量及每個 packet 的長度。
+ * input:
+ *   - pcap_filename: pcap 檔案名稱
+ *   - n: 要擷取的 packet 數量
+ *   - pkt_arr: 指向每個 packet 的指標陣列
+ *   - pkt_lens: 每個 packet 的長度陣列
+ * return value:
+ *   - 回傳實際擷取的 pkt 數量
+ *   - pkt_arr: 指向每個 packet 的指標陣列
+ *   - pkt_lens: 每個 pkt 的長度陣列
  */
-int extract_n_packets_from_pcap(const char *pcap_filename, int n, const uint8_t **pkt_arr, int *pkt_lens) {
+unsigned int extract_n_packets_from_pcap(const char *pcap_filename, int n, const uint8_t **pkt_arr, int *pkt_lens) {
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
+
     if (!handle) {
         fprintf(stderr, "Couldn't open pcap file %s: %s\n", pcap_filename, errbuf);
         return 0;
     }
+
     struct pcap_pkthdr *header;
     const uint8_t *data;
     int count = 0;
+
     while (count < n && pcap_next_ex(handle, &header, &data) == 1) {
         pkt_arr[count] = malloc(header->caplen);
         memcpy((uint8_t*)pkt_arr[count], data, header->caplen);
@@ -80,6 +93,14 @@ int extract_n_packets_from_pcap(const char *pcap_filename, int n, const uint8_t 
 /*
  * 從 pcap 檔案中連續讀取封包，直到填滿 n 個位元組到 output_buffer。
  * 回傳實際讀取的位元組數量。
+ * input:
+ *   - n: 要讀取的位元組數量
+ *   - pcap_filename: pcap 檔案名稱
+ *   - output_buffer: 用來存放讀取的位元組的 buffer
+ *   - pkt_lens: 用來存放每個封包的長度
+ * return value:
+ *   - 回傳實際讀取的位元組數量
+ *   - output_buffer: 包含讀取的位元組
  */
 unsigned int get_n_byte_from_flow(int n, const char *pcap_filename, uint8_t* output_buffer) {
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -100,7 +121,8 @@ unsigned int get_n_byte_from_flow(int n, const char *pcap_filename, uint8_t* out
         // 決定這次要複製多少位元組：取「封包長度」和「緩衝區剩餘空間」的較小值
         if (header->caplen < remaining_space) {
             bytes_to_copy = header->caplen;
-        } else {
+        }
+        else {
             bytes_to_copy = remaining_space;
         }
 
@@ -145,11 +167,46 @@ uint8_t* get_n_byte_from_pkt(int n, const uint8_t *pkt, int pkt_len) {
  * ....
  * (0, 0), (0, 1), ..., (0, n)
  */
-void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256][n]) {
+void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256][n], int current_get_bytes) {
     memset(image, 0, sizeof(unsigned char) * 256 * n); // 初始化 image 為 0
-    for (int i = 0; i < n; ++i) {
-        image[255 - bytes[i]][i] = 255; // 灰階最大值
+
+    /* 下面這一段將會像是 wireshark 的形式顯示 bytes 中的內容 */
+    #ifdef DEBUG
+    for(int i = 0; i < n ; i++){
+        printf("%.2x ", bytes[i]);
+        if (i % 8 == 7) printf(" ");
+        if (i % 16 == 15) printf("\n");
     }
+    #endif
+
+    /* 
+     * 當pcap 抓取到 bytes大於實際所需時，僅須複製實際所需要的大小即可
+     * 以避免 stack overflow 的問題
+     */
+    if (current_get_bytes > n){
+        for (int i = 0; i < n; ++i) {
+            image[255 - bytes[i]][i] = 255; // 灰階最大值
+        }
+    }
+
+    /*
+     * 當 pcap 抓取到的 bytes 小於實際所需時，僅會複製到實際所需的大小
+     */
+    else{
+        for (int i = 0; i < current_get_bytes; ++i) {
+            image[255 - bytes[i]][i] = 255; // 灰階最大值
+        }
+    }
+
+    /* 下面這一個可以將程式的輸出使用 .csv 開啟，驗證圖片的輸出 */
+    #ifdef DEBUG
+    for (int i = 255; i >= 0; i--) {
+        for (int j = 0; j < n; ++j) {
+            printf("%d ,", image[i][j]);
+        }
+        printf("\n");
+    }
+    #endif
 }
 
 /*
@@ -216,20 +273,24 @@ int HAST_ONE(const char *pcap_folder, const char *output_img_folder, const char 
         }
 
         memset(top_n_byte_data, 0, n_bytes);
+        int current_get_bytes = 0;
 
-        /* 開始抓封包的前 m byte 到 top_n_byte_data 中*/
+        /* 當有 .pcap 檔名的檔案的時候才會開始處理 */
         if (strstr(entry->d_name, ".pcap")) {
+            /* 在 pcap 中抓前 n byte */
             snprintf(source_filepath, sizeof(source_filepath), "%s/%s", pcap_folder, entry->d_name);
-            get_n_byte_from_flow(n_bytes ,source_filepath, top_n_byte_data);
+            current_get_bytes = get_n_byte_from_flow(n_bytes ,source_filepath, top_n_byte_data);
+
+            /* 轉換成圖片 */
+            unsigned char image[256][n_bytes];
+            bytes_to_onehot_image(top_n_byte_data, n_bytes, image, current_get_bytes);
+            char output_img_path_and_name[PATH_MAX];
+            snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s.pgm", output_img_folder, entry->d_name);
+            save_image_pgm(output_img_path_and_name, n_bytes, image);
+            free(top_n_byte_data);
+
+            if(deal_file_count++ % 10 == 0) printf("Process %d flows\r", deal_file_count - 1);
         }
-        unsigned char image[256][n_bytes];
-        bytes_to_onehot_image(top_n_byte_data, n_bytes, image);
-        char output_img_path_and_name[PATH_MAX];
-        snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s.pgm", output_img_folder, entry->d_name);
-        save_image_pgm(output_img_path_and_name, n_bytes, image);
-        free(top_n_byte_data);
-        
-        if(deal_file_count++ % 10 == 0) printf("Process %d flows\r", deal_file_count - 1);
     }
     closedir(input_dir);
     printf("Processing complete. Total process %d flows\n", deal_file_count);
@@ -242,6 +303,11 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
     if (n_packets <= 0 || n_bytes <= 0) {
         fprintf(stderr, "Invalid number of packets or bytes: %s, %s\n", n_packets_str, n_bytes_str);
         return 1;
+    }
+
+    if (n_packets >= 4095){
+        fprintf(stderr, "Warning: n_packets is too large, it may cause memory issues.\n");
+        return 1; // 如果 n_packets 太大，直接結束程式
     }
 
     // 檢查並建立輸出資料夾
@@ -265,6 +331,14 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
             const uint8_t *pkt_arr[MAX_PKT_NUM];
             int pkt_lens[MAX_PKT_NUM];
             int pkt_count = extract_n_packets_from_pcap(source_filepath, n_packets, pkt_arr, pkt_lens);
+
+            /* 替每一個 flow 建立一個新的資料夾 */
+            char output_flow_img_folder[PATH_MAX];
+            snprintf(output_flow_img_folder, sizeof(output_flow_img_folder), "%s/%s", output_img_folder, entry->d_name);
+            if (create_directories(output_flow_img_folder) != 0) {
+                fprintf(stderr, "Error: Could not create output directory '%s'.\n", output_flow_img_folder);
+                continue; // 建立失敗，跳過這個 packet
+            }
             
             for (int i = 0; i < pkt_count; ++i) {
                 // 注意：這裡直接傳入 n_bytes，讓 get_n_byte_from_pkt 內部處理長度與填充
@@ -272,17 +346,48 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
                 if (!n_byte_data) continue; // 如果記憶體分配失敗則跳過
 
                 unsigned char image[256][n_bytes];
-                bytes_to_onehot_image(n_byte_data, n_bytes, image);
+                bytes_to_onehot_image(n_byte_data, n_bytes, image, pkt_lens[i]);
 
                 char output_img_path_and_name[PATH_MAX];
-                snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s_pkt%d.pgm", output_img_folder, entry->d_name, i);
+
+                int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.pgm", output_flow_img_folder, i);
+
+                // Check if the output was truncated or if an error occurred
+                if (written_len < 0 || written_len >= (int)sizeof(output_img_path_and_name)) {
+                    fprintf(stderr, "Error: Output path is too long for the buffer. Skipping file.\n");
+                    // Clean up and continue to the next iteration
+                    free(n_byte_data);
+                    free((void*)pkt_arr[i]);
+                    continue; 
+                }
+
                 save_image_pgm(output_img_path_and_name, n_bytes, image);
 
                 free(n_byte_data);
                 free((void*)pkt_arr[i]);
             }
+
+            /* 空圖片 (資料準備) */
+            unsigned char image[256][n_bytes];
+            memset(image, 0, sizeof(image)); // 清空圖片
+
+            /* 填充空圖片 */
+            for (int i = pkt_count; i < n_packets; ++i) {
+                char output_img_path_and_name[PATH_MAX];
+                int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.pgm", output_flow_img_folder, i);
+                
+                // Check if the output was truncated or if an error occurred
+                if (written_len < 0 || written_len >= (int)sizeof(output_img_path_and_name)) {
+                    fprintf(stderr, "Error: Output path is too long for the buffer. Skipping file.\n");
+                    continue;
+                }
+
+                save_image_pgm(output_img_path_and_name, n_bytes, image);
+            }
+
+            if (deal_pkt++ % 10 == 0) printf("Process %d packets\r", deal_pkt - 1);
         }
-        if (deal_pkt++ % 10 == 0) printf("Process %d packets\r", deal_pkt - 1);
+
     }
     closedir(input_dir);
     printf("Processing complete. Total process %d packets\n", deal_pkt);
