@@ -244,6 +244,11 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
         return 1;
     }
 
+    if (n_packets >= 4095){
+        fprintf(stderr, "Warning: n_packets is too large, it may cause memory issues.\n");
+        return 1; // 如果 n_packets 太大，直接結束程式
+    }
+
     // 檢查並建立輸出資料夾
     printf("Checking and creating output directory: %s\n", output_img_folder);
     if (create_directories(output_img_folder) != 0) {
@@ -265,6 +270,14 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
             const uint8_t *pkt_arr[MAX_PKT_NUM];
             int pkt_lens[MAX_PKT_NUM];
             int pkt_count = extract_n_packets_from_pcap(source_filepath, n_packets, pkt_arr, pkt_lens);
+
+            /* 替每一個 flow 建立一個新的資料夾 */
+            char output_flow_img_folder[PATH_MAX];
+            snprintf(output_flow_img_folder, sizeof(output_flow_img_folder), "%s/%s", output_img_folder, entry->d_name);
+            if (create_directories(output_flow_img_folder) != 0) {
+                fprintf(stderr, "Error: Could not create output directory '%s'.\n", output_flow_img_folder);
+                continue; // 建立失敗，跳過這個 packet
+            }
             
             for (int i = 0; i < pkt_count; ++i) {
                 // 注意：這裡直接傳入 n_bytes，讓 get_n_byte_from_pkt 內部處理長度與填充
@@ -275,7 +288,18 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
                 bytes_to_onehot_image(n_byte_data, n_bytes, image);
 
                 char output_img_path_and_name[PATH_MAX];
-                snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s_pkt%d.pgm", output_img_folder, entry->d_name, i);
+
+                int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.pgm", output_flow_img_folder, i);
+
+                // Check if the output was truncated or if an error occurred
+                if (written_len < 0 || written_len >= (int)sizeof(output_img_path_and_name)) {
+                    fprintf(stderr, "Error: Output path is too long for the buffer. Skipping file.\n");
+                    // Clean up and continue to the next iteration
+                    free(n_byte_data);
+                    free((void*)pkt_arr[i]);
+                    continue; 
+                }
+
                 save_image_pgm(output_img_path_and_name, n_bytes, image);
 
                 free(n_byte_data);
