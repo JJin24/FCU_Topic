@@ -179,19 +179,24 @@ void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256]
     }
     #endif
 
-
+    /* 
+     * 當pcap 抓取到 bytes大於實際所需時，僅須複製實際所需要的大小即可
+     * 以避免 stack overflow 的問題
+     */
     if (current_get_bytes > n){
         for (int i = 0; i < n; ++i) {
             image[255 - bytes[i]][i] = 255; // 灰階最大值
         }
     }
 
+    /*
+     * 當 pcap 抓取到的 bytes 小於實際所需時，僅會複製到實際所需的大小
+     */
     else{
         for (int i = 0; i < current_get_bytes; ++i) {
             image[255 - bytes[i]][i] = 255; // 灰階最大值
         }
     }
-
 
     /* 下面這一個可以將程式的輸出使用 .csv 開啟，驗證圖片的輸出 */
     #ifdef DEBUG
