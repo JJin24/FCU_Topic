@@ -10,6 +10,10 @@
 #include <sys/types.h>
 #include <errno.h>
 
+/* png 相關的定義 */
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #define MAX_PKT_NUM 2048 // 可根據需求調整
 //#define DEBUG
 
@@ -209,25 +213,11 @@ void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256]
     #endif
 }
 
-/*
- * 填充成 PGM 格式的圖片，格式為：
- *
- * P5
- * n 256
- * 255
- * image data (每行 n bytes)
- */
-void save_image_pgm(const char *filename, int cols, unsigned char image[256][cols]) {
-    FILE *fp = fopen(filename, "wb");
-    if (!fp) {
-        perror("fopen");
+void save_image_png(const char * filename, int cols, unsigned char image[256][cols]) {
+    if(stbi_write_png(filename, cols, 256, 1, image, cols * sizeof(unsigned char)) == 0) {
+        fprintf(stderr, "Error saving PNG image to %s\n", filename);
         return;
     }
-    fprintf(fp, "P5\n%d 256\n255\n", cols);
-    for (int i = 0; i < 256; ++i) {
-        fwrite(image[i], 1, cols, fp);
-    }
-    fclose(fp);
 }
 
 void help (const char *program_name){
@@ -285,8 +275,8 @@ int HAST_ONE(const char *pcap_folder, const char *output_img_folder, const char 
             unsigned char image[256][n_bytes];
             bytes_to_onehot_image(top_n_byte_data, n_bytes, image, current_get_bytes);
             char output_img_path_and_name[PATH_MAX];
-            snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s.pgm", output_img_folder, entry->d_name);
-            save_image_pgm(output_img_path_and_name, n_bytes, image);
+            snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s.png", output_img_folder, entry->d_name);
+            save_image_png(output_img_path_and_name, n_bytes, image);
             free(top_n_byte_data);
 
             if(deal_file_count++ % 10 == 0) printf("Process %d flows\r", deal_file_count - 1);
@@ -350,7 +340,7 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
 
                 char output_img_path_and_name[PATH_MAX];
 
-                int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.pgm", output_flow_img_folder, i);
+                int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.png", output_flow_img_folder, i);
 
                 // Check if the output was truncated or if an error occurred
                 if (written_len < 0 || written_len >= (int)sizeof(output_img_path_and_name)) {
@@ -361,7 +351,7 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
                     continue; 
                 }
 
-                save_image_pgm(output_img_path_and_name, n_bytes, image);
+                save_image_png(output_img_path_and_name, n_bytes, image);
 
                 free(n_byte_data);
                 free((void*)pkt_arr[i]);
@@ -382,15 +372,15 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
                     continue;
                 }
 
-                save_image_pgm(output_img_path_and_name, n_bytes, image);
+                save_image_png(output_img_path_and_name, n_bytes, image);
             }
 
-            if (deal_pkt++ % 10 == 0) printf("Process %d packets\r", deal_pkt - 1);
+            if (deal_pkt++ % 10 == 0) printf("Process %d flows\r", deal_pkt - 1);
         }
 
     }
     closedir(input_dir);
-    printf("Processing complete. Total process %d packets\n", deal_pkt);
+    printf("Processing complete. Total process %d flows\n", deal_pkt);
     return 0;
 }
 
