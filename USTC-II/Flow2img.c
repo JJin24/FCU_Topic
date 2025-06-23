@@ -179,9 +179,19 @@ void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256]
     }
     #endif
 
-    for (int i = 0; i < current_get_bytes; ++i) {
-        image[255 - bytes[i]][i] = 255; // 灰階最大值
+
+    if (current_get_bytes > n){
+        for (int i = 0; i < n; ++i) {
+            image[255 - bytes[i]][i] = 255; // 灰階最大值
+        }
     }
+
+    else{
+        for (int i = 0; i < current_get_bytes; ++i) {
+            image[255 - bytes[i]][i] = 255; // 灰階最大值
+        }
+    }
+
 
     /* 下面這一個可以將程式的輸出使用 .csv 開啟，驗證圖片的輸出 */
     #ifdef DEBUG
