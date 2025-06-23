@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #define MAX_PKT_NUM 2048 // 可根據需求調整
+//#define DEBUG
 
 /**
  * @brief 遞迴地建立資料夾，類似於 `mkdir -p`
@@ -69,13 +70,16 @@ int create_directories(const char *path) {
 unsigned int extract_n_packets_from_pcap(const char *pcap_filename, int n, const uint8_t **pkt_arr, int *pkt_lens) {
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
+
     if (!handle) {
         fprintf(stderr, "Couldn't open pcap file %s: %s\n", pcap_filename, errbuf);
         return 0;
     }
+
     struct pcap_pkthdr *header;
     const uint8_t *data;
     int count = 0;
+
     while (count < n && pcap_next_ex(handle, &header, &data) == 1) {
         pkt_arr[count] = malloc(header->caplen);
         memcpy((uint8_t*)pkt_arr[count], data, header->caplen);
@@ -117,7 +121,8 @@ unsigned int get_n_byte_from_flow(int n, const char *pcap_filename, uint8_t* out
         // 決定這次要複製多少位元組：取「封包長度」和「緩衝區剩餘空間」的較小值
         if (header->caplen < remaining_space) {
             bytes_to_copy = header->caplen;
-        } else {
+        }
+        else {
             bytes_to_copy = remaining_space;
         }
 
@@ -268,7 +273,7 @@ int HAST_ONE(const char *pcap_folder, const char *output_img_folder, const char 
             snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s.pgm", output_img_folder, entry->d_name);
             save_image_pgm(output_img_path_and_name, n_bytes, image);
             free(top_n_byte_data);
-        
+
             if(deal_file_count++ % 10 == 0) printf("Process %d flows\r", deal_file_count - 1);
         }
     }
@@ -346,8 +351,28 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
                 free(n_byte_data);
                 free((void*)pkt_arr[i]);
             }
+
+            /* 空圖片 (資料準備) */
+            unsigned char image[256][n_bytes];
+            memset(image, 0, sizeof(image)); // 清空圖片
+
+            /* 填充空圖片 */
+            for (int i = pkt_count; i < n_packets; ++i) {
+                char output_img_path_and_name[PATH_MAX];
+                int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.pgm", output_flow_img_folder, i);
+                
+                // Check if the output was truncated or if an error occurred
+                if (written_len < 0 || written_len >= (int)sizeof(output_img_path_and_name)) {
+                    fprintf(stderr, "Error: Output path is too long for the buffer. Skipping file.\n");
+                    continue;
+                }
+
+                save_image_pgm(output_img_path_and_name, n_bytes, image);
+            }
+
+            if (deal_pkt++ % 10 == 0) printf("Process %d packets\r", deal_pkt - 1);
         }
-        if (deal_pkt++ % 10 == 0) printf("Process %d packets\r", deal_pkt - 1);
+
     }
     closedir(input_dir);
     printf("Processing complete. Total process %d packets\n", deal_pkt);
