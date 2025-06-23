@@ -11,7 +11,6 @@
 #include <errno.h>
 
 #define MAX_PKT_NUM 2048 // 可根據需求調整
-#define DEBUG = 1// 定義 DEBUG 以啟用除錯輸出
 
 /**
  * @brief 遞迴地建立資料夾，類似於 `mkdir -p`
@@ -256,19 +255,22 @@ int HAST_ONE(const char *pcap_folder, const char *output_img_folder, const char 
         memset(top_n_byte_data, 0, n_bytes);
         int current_get_bytes = 0;
 
-        /* 開始抓封包的前 m byte 到 top_n_byte_data 中*/
+        /* 當有 .pcap 檔名的檔案的時候才會開始處理 */
         if (strstr(entry->d_name, ".pcap")) {
+            /* 在 pcap 中抓前 n byte */
             snprintf(source_filepath, sizeof(source_filepath), "%s/%s", pcap_folder, entry->d_name);
             current_get_bytes = get_n_byte_from_flow(n_bytes ,source_filepath, top_n_byte_data);
-        }
-        unsigned char image[256][n_bytes];
-        bytes_to_onehot_image(top_n_byte_data, n_bytes, image, current_get_bytes);
-        char output_img_path_and_name[PATH_MAX];
-        snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s.pgm", output_img_folder, entry->d_name);
-        save_image_pgm(output_img_path_and_name, n_bytes, image);
-        free(top_n_byte_data);
+
+            /* 轉換成圖片 */
+            unsigned char image[256][n_bytes];
+            bytes_to_onehot_image(top_n_byte_data, n_bytes, image, current_get_bytes);
+            char output_img_path_and_name[PATH_MAX];
+            snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s.pgm", output_img_folder, entry->d_name);
+            save_image_pgm(output_img_path_and_name, n_bytes, image);
+            free(top_n_byte_data);
         
-        if(deal_file_count++ % 10 == 0) printf("Process %d flows\r", deal_file_count - 1);
+            if(deal_file_count++ % 10 == 0) printf("Process %d flows\r", deal_file_count - 1);
+        }
     }
     closedir(input_dir);
     printf("Processing complete. Total process %d flows\n", deal_file_count);
