@@ -364,7 +364,7 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
             /* 填充空圖片 */
             for (int i = pkt_count; i < n_packets; ++i) {
                 char output_img_path_and_name[PATH_MAX];
-                int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.pgm", output_flow_img_folder, i);
+                int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.png", output_flow_img_folder, i);
                 
                 // Check if the output was truncated or if an error occurred
                 if (written_len < 0 || written_len >= (int)sizeof(output_img_path_and_name)) {
