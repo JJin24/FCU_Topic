@@ -318,7 +318,7 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
     while ((entry = readdir(input_dir)) != NULL) {
         if (strstr(entry->d_name, ".pcap")) {
             snprintf(source_filepath, sizeof(source_filepath), "%s/%s", pcap_folder, entry->d_name);
-            const uint8_t *pkt_arr[MAX_PKT_NUM];
+            const uint8_t *pkt_arr[n_packets]; /* 建立一個 '存放 uint_8 指標' 的陣列 */
             int pkt_lens[MAX_PKT_NUM];
             int pkt_count = extract_n_packets_from_pcap(source_filepath, n_packets, pkt_arr, pkt_lens);
 
