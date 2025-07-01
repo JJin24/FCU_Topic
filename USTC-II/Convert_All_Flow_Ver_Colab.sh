@@ -50,7 +50,7 @@ if [[ "${1-}" == "-h" || "${1-}" == "--help" ]]; then
 fi
 
 # Check for the correct number of arguments
-if [[ $# -ne 3 ]]; then
+if [[ $# -ne 5 ]]; then
     echo "Error: Invalid number of arguments."
     usage
     exit 1
