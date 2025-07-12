@@ -8,7 +8,7 @@ LDFLAGS=-lpcap
 all: Flow2img Capture_Flow
 
 # 執行檔 'Flow2img' 依賴於來源檔 'Flow2img.c'
-Flow2img: Flow2img.c
+Flow2img: Flow2img.c de_addr_noise.c de_addr_noise.h stb_image_write.h
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 Capture_Flow: capture_Flow.c uthash.h flow_tracker.c flow_tracker.h
