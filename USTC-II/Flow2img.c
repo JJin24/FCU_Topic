@@ -14,6 +14,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#include "de_addr_noise.h"
+
 #define MAX_PKT_NUM 2048 // 可根據需求調整
 //#define DEBUG
 
@@ -176,11 +178,12 @@ void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256]
 
     /* 下面這一段將會像是 wireshark 的形式顯示 bytes 中的內容 */
     #ifdef DEBUG
-    for(int i = 0; i < n ; i++){
+    for(int i = 0; i < n - 1 ; i++){
         printf("%.2x ", bytes[i]);
         if (i % 8 == 7) printf(" ");
         if (i % 16 == 15) printf("\n");
     }
+    printf("%d\n", bytes[current_get_bytes]);
     #endif
 
     /* 
@@ -223,10 +226,12 @@ void save_image_png(const char * filename, int cols, unsigned char image[256][co
 void help (const char *program_name){
     fprintf(stdout, "Usage:\n");
     fprintf(stdout, "  [OPTION-1] = -1, -f, --flow, --hast-1, --HAST-I\n");
-    fprintf(stdout, "    %s [OPTION-1] <pcap_folder> <output_img_folder> <m_bytes>\n", program_name);
+    fprintf(stdout, "    %s [OPTION-1] <pcap_folder> <output_img_folder> "
+                    "<m_bytes> <opt>\n", program_name);
     fprintf(stdout, "    使用 HAST-I 的方式提取 Flow 的前 m 位元組\n\n");
     fprintf(stdout, "  [OPTION-2] = -2, -p, --packet, --hast-2, --HAST-II\n");
-    fprintf(stdout, "    %s [OPTION-2] <pcap_folder> <output_img_folder> <n_packets> <m_byte>\n", program_name);
+    fprintf(stdout, "    %s [OPTION-2] <pcap_folder> <output_img_folder> "
+                    "<n_packets> <m_byte> <opt>\n", program_name);
     fprintf(stdout, "    使用 HAST-II 的方式先提取 Flow 的前 n 個封包，接著在每個封包中提取前 m 位元\n\n");
     fprintf(stdout, "  [OPTION-3] = -h, --help\n");
     fprintf(stdout, "    %s [OPTION-3]\n", program_name);
@@ -234,7 +239,7 @@ void help (const char *program_name){
     fprintf(stdout, "論文連結:https://ieeexplore.ieee.org/document/8171733\n");
 }
 
-int HAST_ONE(const char *pcap_folder, const char *output_img_folder, const char *m_bytes_str) {
+int HAST_ONE(const char *pcap_folder, const char *output_img_folder, const char *m_bytes_str, const char *opt) {
     int n_bytes = atoi(m_bytes_str);
     if (n_bytes <= 0) {
         fprintf(stderr, "Invalid number of packets or bytes: %s\n", m_bytes_str);
@@ -273,7 +278,15 @@ int HAST_ONE(const char *pcap_folder, const char *output_img_folder, const char 
 
             /* 轉換成圖片 */
             unsigned char image[256][n_bytes];
-            bytes_to_onehot_image(top_n_byte_data, n_bytes, image, current_get_bytes);
+
+            if (strcmp(opt, "de_addr_noise") == 0) {
+                __DENOISE_bytes_to_onehot_image(top_n_byte_data, n_bytes, image,
+                current_get_bytes); // 使用去除 IP 的版本
+            }
+            else {
+                bytes_to_onehot_image(top_n_byte_data, n_bytes, image, current_get_bytes);
+            }
+            
             char output_img_path_and_name[PATH_MAX];
             snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%s.png", output_img_folder, entry->d_name);
             save_image_png(output_img_path_and_name, n_bytes, image);
@@ -287,7 +300,9 @@ int HAST_ONE(const char *pcap_folder, const char *output_img_folder, const char 
     return 0;
 }
 
-int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char *n_packets_str, const char *n_bytes_str) {
+int HAST_TWO(const char *pcap_folder, const char *output_img_folder,\
+    const char *n_packets_str, const char *n_bytes_str, const char *opt) {
+    printf("%s\n", opt);
     int n_packets = atoi(n_packets_str);
     int n_bytes = atoi(n_bytes_str);
     if (n_packets <= 0 || n_bytes <= 0) {
@@ -336,8 +351,14 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
                 if (!n_byte_data) continue; // 如果記憶體分配失敗則跳過
 
                 unsigned char image[256][n_bytes];
-                bytes_to_onehot_image(n_byte_data, n_bytes, image, pkt_lens[i]);
 
+                if (strcmp(opt, "de_addr_noise") == 0) {
+                    __DENOISE_bytes_to_onehot_image(n_byte_data, n_bytes, image,
+                    pkt_lens[i]); // 使用去除 IP 的版本
+                }
+                else {
+                    bytes_to_onehot_image(n_byte_data, n_bytes, image, pkt_lens[i]);
+                }
                 char output_img_path_and_name[PATH_MAX];
 
                 int written_len = snprintf(output_img_path_and_name, sizeof(output_img_path_and_name), "%s/%d.png", output_flow_img_folder, i);
@@ -359,7 +380,7 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
 
             /* 空圖片 (資料準備) */
             unsigned char image[256][n_bytes];
-            memset(image, 0, sizeof(image)); // 清空圖片
+            memset(image, 0, sizeof(unsigned char) * 256 * n_bytes); // 清空圖片
 
             /* 填充空圖片 */
             for (int i = pkt_count; i < n_packets; ++i) {
@@ -377,41 +398,54 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder, const char 
 
             if (deal_pkt++ % 10 == 0) printf("Process %d flows\r", deal_pkt - 1);
         }
-
     }
+
     closedir(input_dir);
     printf("Processing complete. Total process %d flows\n", deal_pkt);
     return 0;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2 || argc > 6) {
+    if (argc < 2 || argc > 7) {
         help(argv[0]);
         return 1;
     }
+
+    int status = 0;
 
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         help(argv[0]);
         return 0;
     }
-
-    if (strcmp(argv[1], "-f") == 0 || strcmp(argv[1], "--flow") == 0 || strcmp(argv[1], "-1") == 0 || strcmp(argv[1], "--hast-1" ) == 0 || strcmp(argv[1], "--HAST-I" ) == 0){
-        if (argc != 5) {
-            printf("Usage: %s -f <pcap_folder> <output_img_folder> <n_bytes>\n", argv[0]);
+    else if (strcmp(argv[1], "-f") == 0 || strcmp(argv[1], "--flow") == 0 || strcmp(argv[1], "-1") == 0 || strcmp(argv[1], "--hast-1" ) == 0 || strcmp(argv[1], "--HAST-I" ) == 0){
+        if (argc > 6 || argc < 5) {
+            printf("Usage: %s -f <pcap_folder> <output_img_folder> <n_bytes> \
+                    <opt>\n", argv[0]);
             return 1;
         }
-        int status = HAST_ONE(argv[2], argv[3], argv[4]);
+
+        if (argc == 5){
+            status = HAST_ONE(argv[2], argv[3], argv[4], "NULL");
+        }
+        else if(argc == 6){
+            status = HAST_ONE(argv[2], argv[3], argv[4], argv[5]);
+        }
 
         if (status != 0) return status;
         return 0;
     }
-
-    if (strcmp(argv[1], "-p") == 0 || strcmp(argv[1], "--packet") == 0 || strcmp(argv[1], "-2") == 0 || strcmp(argv[1], "--hast-2" ) == 0 || strcmp(argv[1], "--HAST-II" ) == 0){
-        if (argc != 6) {
-            printf("Usage: %s -p <pcap_folder> <output_img_folder> <n_packets> <n_byte>\n", argv[0]);
+    else if (strcmp(argv[1], "-p") == 0 || strcmp(argv[1], "--packet") == 0 || strcmp(argv[1], "-2") == 0 || strcmp(argv[1], "--hast-2" ) == 0 || strcmp(argv[1], "--HAST-II" ) == 0){
+        if (argc > 7 || argc < 6) {
+            printf("Usage: %s -p <pcap_folder> <output_img_folder> <n_packets> \
+                    <n_byte> <opt>\n", argv[0]);
             return 1;
         }
-        int status = HAST_TWO(argv[2], argv[3], argv[4], argv[5]);
+        if (argc == 6) {
+            status = HAST_TWO(argv[2], argv[3], argv[4], argv[5], "NULL");
+        }
+        else if (argc == 7) {
+            status = HAST_TWO(argv[2], argv[3], argv[4], argv[5], argv[6]);
+        }
 
         if (status != 0)return status;
         return 0;
