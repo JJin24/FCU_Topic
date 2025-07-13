@@ -5,14 +5,16 @@ from PIL import Image
 import torchvision.transforms as transforms
 
 # 定義區
-flow_floder_path = "D:\\Dataset\\flows\\2.5_Flow_img\\DoS_Slowloris" # 請填入要預測的流量資料夾路徑
-# full_model_path = "./LeNet_mnist_complete_model.pth" # 完整模型
-model_path = "./best_model_1024_2.pth" # 僅有權重的模型
+flow_floder_path = "" # 請填入要預測的流量資料夾路徑
+# full_model_path = "" # 完整模型
+model_path = "" # 僅有權重的模型
 label = ['Good', 'Good', 'Good', 'Good', 'Good', 'Good', 'Good', 'Good', 'Good', 'Good', 'Good', 'Good', 'Bot_Attack',
          'Brute_Force_Web_Attack', 'Brute_Force_XSS_Attack', 'DDoS_LOIC_HTTP_Attack', 'DDoS_FTTP_Attack',
          'DDoS_HOIC_Attack', 'DDoS_LOIC_UDP_Attack', 'DoS_GoldenEye_Attack', 'DoS_Hulk_Attack',
          'DoS_SlowHTTPTest_Attack', 'DoS_Slowloris_Attack', 'Infiltration_Attack', 'SQL_Injection',
          'SSH_Bruteforce_Attack']
+n_pkts = 6
+m_bytes = 100
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -33,20 +35,19 @@ class SimpleCNN(nn.Module):
 class CNN_LSTM(nn.Module):
     def __init__(self, num_classes=26):
         super().__init__()
-        self.cnns = nn.ModuleList([SimpleCNN() for _ in range(6)])
+        self.cnns = nn.ModuleList([SimpleCNN() for _ in range(n_pkts)])
         self.lstm = nn.LSTM(input_size=128, hidden_size=64, batch_first=True)
         self.classifier = nn.Linear(64, num_classes)
 
     def forward(self, x):
         B = x.size(0)
         outs = []
-        for i in range(6):
+        for i in range(n_pkts):
             outs.append(self.cnns[i](x[:,i]))
         seq = torch.stack(outs, dim=1)
         lstm_out, _ = self.lstm(seq)
         final = lstm_out[:, -1, :]
         return self.classifier(final)
-
 
 # 後續的模型做處理 transforms.ToTensor() 同時也可以將 img 直接轉換到 tensor 形式的數值
 preprocess = transforms.Compose([
@@ -84,11 +85,10 @@ def predit(FlowDir_path, model):
     result_index = torch.argmax(result, dim=1).item()
     predicted_label = label[result_index]
 
-    print(f"資料夾: {os.path.basename(FlowDir_path)}, 預測結果: {predicted_label}, 索引: {result_index}")
+    # print(f"資料夾: {os.path.basename(FlowDir_path)}, 預測結果: {predicted_label}, 索引: {result_index}")
 
-
-
-    
+    # CSV 輸出
+    print(f"{os.path.basename(FlowDir_path)}, {predicted_label}, {result_index}")
 
 if __name__ == "__main__":
     # 在 pytorch 中要載入完整的模型，如果 version >= 2.6 的話 weight_only 預設會是 True
