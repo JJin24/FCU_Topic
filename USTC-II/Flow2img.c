@@ -3,7 +3,7 @@
 #include <string.h>
 #include <pcap.h>
 #include <dirent.h>
-#include <limits.h>
+#include <linux/limits.h>
 
 // 為建立資料夾新增的標頭檔
 #include <sys/stat.h>
@@ -334,7 +334,7 @@ int HAST_TWO(const char *pcap_folder, const char *output_img_folder,\
         if (strstr(entry->d_name, ".pcap")) {
             snprintf(source_filepath, sizeof(source_filepath), "%s/%s", pcap_folder, entry->d_name);
             const uint8_t *pkt_arr[n_packets]; /* 建立一個 '存放 uint_8 指標' 的陣列 */
-            int pkt_lens[MAX_PKT_NUM];
+            int pkt_lens[n_packets];
             int pkt_count = extract_n_packets_from_pcap(source_filepath, n_packets, pkt_arr, pkt_lens);
 
             /* 替每一個 flow 建立一個新的資料夾 */
