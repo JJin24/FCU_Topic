@@ -51,7 +51,7 @@ typedef enum {
  */
 typedef struct {
     uint8_t pcap_data[MAX_PKT_LEN * N_PKTS];
-    size_t pcap_size;
+    uint32_t pcap_size;
     char s_ip[INET_ADDRSTRLEN];
     char d_ip[INET_ADDRSTRLEN];
     int s_port;
@@ -65,7 +65,7 @@ typedef struct {
  * 1. fd: socket file descriptor
  * 2. state: 目前的讀取狀態 (讀取 header 或 body)
  * 3. buffer: 用來暫存從 socket 讀進來的資料
- * 4. to_read: 還需要讀取多少 bytes
+ * 4. to_read: 預期需要讀取的 bytes 數量 (需要在下次讀取前需要設定好了)
  * 5. received: 已經接收了多少 bytes
  */
 typedef struct {

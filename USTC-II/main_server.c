@@ -224,6 +224,21 @@ static void handle_client_data(int epoll_fd, client_info *ci, ThreadPool *pool) 
             }
             memcpy(task_arg, ci->buffer, sizeof(Flow2img_II_context));
 
+            /*
+             * 將大端序的資訊轉換為小端序
+             * 
+             * 注意：如果要轉換 buffer 內的內容時，建議先複製一份出來，在進行轉換
+             * 避免修改的過程因為 struct 的對齊機制導致資料錯亂。
+             * 
+             * 需要大小端序轉換的資訊有：
+             * 除了 uint8_t 和 char 類型及其陣列類型的資料外，
+             * 其他都需要轉換大小端序。
+             * 例如：int[32] (內部的每一個元素都要單獨轉換)，uint32_t，long int 等
+             */
+            task_arg->pcap_size = ntohl(task_arg->pcap_size);
+            task_arg->s_port = ntohs(task_arg->s_port);
+            task_arg->d_port = ntohs(task_arg->d_port);
+
             if (thread_pool_add_task(pool, Flow2img_HAST_Two, task_arg) != 0) {
                 fprintf(stderr, "Failed to add task to thread pool.\n");
                 free(task_arg);
