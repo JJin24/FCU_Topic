@@ -102,6 +102,21 @@ socket 傳送的資料格式如下 (待補充)
 ./HAST_Two
 ```
 
-### 已知問題
+### 傳送端傳送 Flow2img_II_context 方式
 
-- socket 接收方式有誤，關於該 flow 的 metadata 不會成功的讀取。
+傳送端傳送一個 pcap 資料需要先後傳送兩個 socket 到 `HAST_Two` 所設定的 socket (`/tmp/Flow2img_II_Proxy.sock`)。
+
+1. 紀錄 `Flow2img_II_Proxy` 結構大小的封包 (`sizeof(Flow2img_II_Proxy)`)。
+2. 傳送已經建立好的 `Flow2img_II_Proxy` 結構。
+
+> [!WARNING]
+>
+> 在傳送 `Flow2img_II_Proxy` 結構前需要將內部非 `uint8_t` 和 `char` 類型及其陣列類型外的資料轉換成大端序 (使用 `htonl` 或 `htons` 轉換)。
+
+> [!NOTE]
+>
+> 為什麼需要先傳送 `Flow2img_II_Proxy` 結構大小的封包?
+>
+> 因為當初設計 `Flow2img_II_Proxy` 結構的時候，因為不確定傳送端會傳送多大的 pcap 資料過來，所以設計先讀取 `pcap_size` 後再替 `pcap_data` 準備 buffer 使用。後期因為直接先定義 `pcap_data` 可用的 buffer 大小為 `sizeof(uint8_t) * MAX_PKT_LEN * N_PKTS` 個 Bytes，所以可以直接實際上該步驟並沒有實際的幫助。
+>
+> 但為使其他尚未記載的資訊可以方便先行傳送，因此目前暫時保留此傳送機制。
