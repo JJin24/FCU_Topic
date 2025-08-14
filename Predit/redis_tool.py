@@ -11,6 +11,7 @@ def connect_to_redis(host = REDIS_HOST, port = REDIS_PORT, db = REDIS_DB):
     """
     try:
         r = redis.Redis(host = host, port = port, db = db)
+        print(f"Successfully connected to Redis ({host}:{port} DB:{db}).")
         return r
     except redis.exceptions.ConnectionError as e:
         print(f"無法連線至 Redis，請檢查您的 Redis 伺服器是否正在運行。錯誤訊息: {e}")
@@ -24,9 +25,13 @@ def get_a_hset_data(r):
     """
     try:
         for key in r.scan_iter():
-            if r.type(key) == 'hash':
+            print(f"Checking key: {key}")
+            if r.type(key).decode("utf-8") == 'hash':
+                print(f"Get Key : {key}")
                 hset_data = r.hgetall(key)
+                r.delete(key) # 刪除已取得的 HSET 資料
                 return key, hset_data
+            r.delete(key) # 如果不是 HSET，則刪除該鍵
         return None, None
     except Exception as e:
         print(f"發生錯誤: {e}")
