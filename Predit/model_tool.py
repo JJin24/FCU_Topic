@@ -5,6 +5,7 @@ from PIL import Image
 from torchvision import transforms
 import config
 import mariadb_tool
+import json
 
 def load_images_from_hset(hset: dict):
     """
@@ -16,12 +17,14 @@ def load_images_from_hset(hset: dict):
     """
     # 步驟 1: 定義通用的影像轉換流程
     transform = transforms.Compose([
-        transforms.Resize((config.M_BYTES, 256)),  # 調整大小
+        transforms.Resize((64, 64)),  # 調整大小
         transforms.ToTensor()  # 轉換為 Tensor (會將像素值標準化到 [0, 1])
     ])
     
     processed_tensors = []  # 使用 Python list 來暫存處理好的單張圖片 Tensor
-    img_names = [f"img_{i}" for i in range(config.N_PKTS)]
+    img_names = [f"{i}.png".encode("utf-8") for i in range(config.N_PKTS)]
+
+    binary_data = hset.items()  # 取得 HSET 中的所有鍵值對
 
     # 步驟 2: 迭代處理每一張圖片
     for name in img_names:
@@ -41,7 +44,7 @@ def load_images_from_hset(hset: dict):
             processed_tensors.append(tensor_img)
         except Exception as e:
             print(f"警告：處理欄位 '{name}' 時發生錯誤: {e}，將跳過此圖片。")
-            continue
+            return torch.empty(0)  # 如果有任何圖片處理失敗，回傳一個空的 Tensor
 
     # 步驟 3: 將 list 中的所有 Tensor 堆疊成一個批次 Tensor
     # 如果 list 為空 (所有圖片都載入失敗)，回傳一個空的 Tensor
@@ -51,7 +54,7 @@ def load_images_from_hset(hset: dict):
 
     # torch.stack 會在第 0 維度上增加一個新的維度 (batch dimension)
     # [C, H, W], [C, H, W], ... -> [N, C, H, W]
-    batch_tensor = torch.stack(processed_tensors, dim=0)
+    batch_tensor = torch.stack(processed_tensors, dim = 0)
     batch_tensor = batch_tensor.unsqueeze(0)  # 增加一個批次維度，變成 [1, N, C, H, W]
     
     return batch_tensor
@@ -87,37 +90,40 @@ def save_results(rDB, mDB, result, hset):
         prob = torch.softmax(result, dim = 1)
         score, pred_class = torch.max(prob, dim = 1)
 
+        score = score.item()
+        pred_class = pred_class.item()
+        print(f"Predicted class: {pred_class}, Score: {score}")
+
         # 檢查預測分數是否超過閾值
-        if score > config.THRESHOLD:
+        if score < config.THRESHOLD:
             pred_class = config.TOTAL_LABLE + 1
 
         # 從 Redis 取出的原始 hset 值是 bytes，需要解碼成字串
-        def get_decoded(key):
-            val = hset.get(key)
-            return val.decode('utf-8') if val is not None else None
-        # 預測為壞
+        metadata = hset.get('metadata'.encode("utf-8")).decode("utf-8")
+        metadata = json.loads(metadata) # 轉換成字典格式
+
+        print(f"Metadata: {metadata}")
 
         flow_info = {
-            'timestamp' : get_decoded('timestamp'),
-            'src_ip' : get_decoded('src_ip'),
-            'dst_ip' : get_decoded('dst_ip'),
-            'src_port' : get_decoded('src_port'),
-            'dst_port' : get_decoded('dst_port'),
-            'protocol' : get_decoded('protocol')
+            'timestamp' : metadata.get('timestamp'),
+            'src_ip' : metadata.get('s_ip'),
+            'dst_ip' : metadata.get('d_ip'),
+            'src_port' : metadata.get('s_port'),
+            'dst_port' : metadata.get('d_port'),
+            'protocol' : metadata.get('protocol')
         }
-        mariadb_tool.insert_alert_data(mDB, 'flow', flow_info)
+        last_id = mariadb_tool.insert_data(mDB, 'flow', flow_info)
+        print("Flow data inserted into MariaDB.")
+        print(f"Type of last_id: {type(last_id)}, score: {type(score)}, pred_class: {type(pred_class)}")
 
         if pred_class != config.GOOD_INDEX:
             alert_data = {
-                'id': mDB.LAST_INSERT_ID(),
-                'pcap': hset.get('pcap_data'),
-                'score': score.item(),
-                'label': pred_class.item()
+                'id': last_id,
+                'pcap': hset.get('pcap_data'.encode("utf-8")),
+                'score': str(score),
+                'label': str(pred_class)
             }
-
-
-            mariadb_tool.insert_flow_data(mDB, 'alert_history', alert_data)
-        mDB.cursor.commit()
+            mariadb_tool.insert_data(mDB, 'alert_history', alert_data)
 
     except Exception as e:
-        print(f"儲存結果到 Redis 時發生錯誤: {e}")
+        print(f"儲存結果到 MariaDB 時發生錯誤: {e}")
