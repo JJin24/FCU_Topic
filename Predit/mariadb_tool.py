@@ -14,6 +14,7 @@ def connect_to_mariadb():
             password = MARIADB_PASSWORD,
             database = MARIADB_DATABASE
         )
+        print(f"Successfully connected to MariaDB ({MARIADB_HOST}:{MARIADB_PORT} DB:{MARIADB_DATABASE}).")
         return conn
     except mariadb.Error as e:
         print(f"無法連線至 MariaDB，請檢查您的資料庫設定。錯誤訊息: {e}")
@@ -35,5 +36,6 @@ def insert_data(conn, table, data):
         cursor.execute(sql, tuple(data.values()))
         conn.commit()
         print("資料插入成功。")
+        return cursor.lastrowid
     except mariadb.Error as e:
         print(f"插入資料時發生錯誤: {e}")
