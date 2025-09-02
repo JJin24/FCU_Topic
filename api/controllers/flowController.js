@@ -25,7 +25,6 @@ const handleGetFlowByUUID = async (req, res) => {
   }
 };
 
-
 const handleGetFlowByIP = async (req, res) => {
   const { ip } = req.params;
   console.log("Find ip: ", ip);
@@ -36,6 +35,17 @@ const handleGetFlowByIP = async (req, res) => {
   }
   else {
     res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve flow data' });
+  }
+};
+
+const handleGetAllFlowIPCount = async (req, res) => {
+  const ipCount = await flowService.getAllFlowIPCount();
+
+  if (ipCount) {
+    res.json(ipCount);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve IP count data' });
   }
 };
 
@@ -64,10 +74,35 @@ const handleGetTopXDayFlow = async (req, res) => {
   }
 };
 
+const handleGet24HourFlowCount = async (req, res) => {
+  const flowCount = await flowService.get24HourFlowCount();
+
+  if (flowCount) {
+    res.json(flowCount);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve 24 hour flow count data' });
+  }
+};
+
+const handleGetPerHourAllFlowCount = async (req, res) => {
+  const flowCount = await flowService.getPerHourAllFlowCount();
+
+  if (flowCount) {
+    res.json(flowCount);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve per hour all flow count data' });
+  }
+};
+
 module.exports = {
   handleGetAllFlow,
   handleGetFlowByUUID,
   handleGetFlowByIP,
+  handleGetAllFlowIPCount,
   handleGetAllFlowProtocolCount,
-  handleGetTopXDayFlow
+  handleGetTopXDayFlow,
+  handleGet24HourFlowCount,
+  handleGetPerHourAllFlowCount
 };

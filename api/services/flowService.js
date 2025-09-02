@@ -79,6 +79,28 @@ async function getFlowByIP(ip){
   }
 }
 
+async function getAllFlowIPCount(){
+  var conn;
+  try{
+    conn = await pool.getConnection();
+    
+    const ipCount = await conn.query(
+      "SELECT ip, COUNT(*) AS count \
+      FROM (SELECT src_ip AS ip FROM flow UNION ALL SELECT dst_ip AS ip FROM flow) AS combined_ips \
+      GROUP BY ip\
+      ORDER BY ip ASC;")
+
+    console.log(ipCount);
+    return ipCount;
+  }
+  catch(err){
+    console.error('Error in getIPCount', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+}
+
 async function getFlowProtocolCount(){
   var conn;
   try{
@@ -124,10 +146,102 @@ async function getTopXDayFlow(x){
   }
 }
 
+async function get24HourFlowCount(){
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(
+      "SELECT src_ip, dst_ip, COUNT(*) AS count \
+      FROM flow \
+      WHERE TIMESTAMP >= NOW() - INTERVAL 24 HOUR \
+      GROUP BY src_ip, dst_ip;"
+    );
+    console.log(rows);
+    return rows;
+  }
+  catch (err) {
+    console.error('Error in get24HourFlowCount', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+}
+
+/* From Gemini
+ * 1. WITH RECURSIVE HourlySeries AS (...) (遞迴 CTE)：
+ *    - 這是實現「自動填滿」和「依時間排序」的關鍵。它會生成一個包含過去 24 個完整小時的序列。
+ *    - 錨定成員 (SELECT CAST(DATE_FORMAT(...) AS DATETIME) AS hour_floor)：
+ *        NOW() - INTERVAL 23 HOUR：計算 23 小時前的時間點。
+ *        DATE_FORMAT(..., '%Y-%m-%d %H:00:00')：將這個時間點截斷到小時的開始（例如，如果現在是 13:40，23 小時前是 14:40 昨天，截斷後就是昨天的 14:00:00）。
+ *        CAST(... AS DATETIME)：確保結果是 DATETIME 類型，以便後續的時間計算。這個就是我們的起始小時。
+ *    - 遞迴成員 (UNION ALL SELECT ... FROM HourlySeries WHERE ...)：
+ *        hour_floor + INTERVAL 1 HOUR：在前一個小時的基礎上增加一小時。
+ *        WHERE hour_floor + INTERVAL 1 HOUR <= CAST(DATE_FORMAT(NOW(), '%Y-%m-%d %H:00:00') AS DATETIME)：遞迴會一直進行，直到產生的小時的開始時間等於或早於「當前小時的開始時間」（例如，如果現在是 13:40，它會包含今天的 13:00:00，但不會包含 14:00:00，因為那還沒開始）。
+ *    - 結果：這個 HourlySeries CTE 會產生從「23 小時前的那一小時的開始」到「當前小時的開始」共 24 個連續的小時時間點。例如，如果現在是 13:40，它會生成昨天的 14:00:00, 15:00:00, ..., 23:00:00，然後今天的 00:00:00, 01:00:00, ..., 13:00:00。
+ * 2. LEFT JOIN (與流量數據合併)：
+ *    - 我們在 LEFT JOIN 的右側使用一個子查詢 (flow_counts) 來計算實際的每小時流量。
+ *    - flow_counts 子查詢：
+ *        WHERE TIMESTAMP >= NOW() - INTERVAL 24 HOUR：修正了這裡為 24 小時，確保只計算最近 24 小時內的流量。
+ *        DATE_FORMAT(TIMESTAMP, '%Y-%m-%d %H:00:00')：將 flow 表中的每個 TIMESTAMP 也截斷到小時，以便與 HourlySeries 中的 hour_floor 進行匹配。
+ *        GROUP BY DATE_FORMAT(TIMESTAMP, '%Y-%m-%d %H:00:00')：根據截斷後的小時進行計數。
+ *        ON h.hour_floor = flow_counts.flow_hour_floor：這將 HourlySeries 中的每個小時時間點與實際有流量的小時計數進行匹配。
+ *        COALESCE(flow_counts.count, 0) AS count：這是「自動填滿 0」的關鍵。如果 LEFT JOIN 沒有找到匹配的流量數據（即某個小時沒有流量），那麼 flow_counts.count 將會是 NULL，COALESCE 函數會將 NULL 替換為 0。
+ * 3. ORDER BY h.hour_floor ASC：
+ *    - 這確保了結果是按照小時的完整時間戳記進行升序排列，從而實現了你要求的「前一天 22, 23, 今天 0, 1 ..., 21」的嚴格時間順序。
+ */
+async function getPerHourAllFlowCount(){
+  var conn;
+  try{
+    conn = await pool.getConnection();
+
+    const perHourAllFlowCount = await conn.query(
+    "WITH RECURSIVE HourlySeries AS ( \
+    SELECT \
+        CAST(DATE_FORMAT(NOW() - INTERVAL 23 HOUR, '%Y-%m-%d %H:00:00') AS DATETIME) AS hour_floor \
+    UNION ALL \
+    SELECT \
+        hour_floor + INTERVAL 1 HOUR \
+    FROM \
+        HourlySeries \
+    WHERE \
+        hour_floor + INTERVAL 1 HOUR <= CAST(DATE_FORMAT(NOW(), '%Y-%m-%d %H:00:00') AS DATETIME) \
+    ) \
+    SELECT \
+        DATE_FORMAT(h.hour_floor, '%Y-%m-%d %H:00:00') AS full_hour_timestamp, \
+        HOUR(h.hour_floor) AS hour, \
+        COALESCE(flow_counts.count, 0) AS count \
+    FROM \
+        HourlySeries h \
+    LEFT JOIN ( \
+    SELECT \
+        DATE_FORMAT(TIMESTAMP, '%Y-%m-%d %H:00:00') AS flow_hour_floor, \
+        COUNT(*) AS count \
+    FROM \
+        flow \
+    WHERE \
+        TIMESTAMP >= NOW() - INTERVAL 24 HOUR \
+    GROUP BY \
+        DATE_FORMAT(TIMESTAMP, '%Y-%m-%d %H:00:00') \
+    ) AS flow_counts ON h.hour_floor = flow_counts.flow_hour_floor \
+    ORDER BY h.hour_floor ASC;"
+    )
+    console.log(perHourAllFlowCount);
+    return perHourAllFlowCount;
+  }
+  catch(err){
+    console.error('Error in getPerHourAllFlowCount', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+}
+
 module.exports = {
   getAllFlow,
   getFlowByUUID,
   getFlowByIP,
+  getAllFlowIPCount,
   getFlowProtocolCount,
-  getTopXDayFlow
+  getTopXDayFlow,
+  get24HourFlowCount,
+  getPerHourAllFlowCount
 };
