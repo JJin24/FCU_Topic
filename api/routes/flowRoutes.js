@@ -124,6 +124,59 @@ router.get('/ip/:ip', flowController.handleGetFlowByIP);
 
 /**
  * @swagger
+ * /flow/ipCount:
+ *   get:
+ *     summary: 取得每個 IP 地址的出現次數
+ *     description: 回傳一個陣列，其中包含每個 IP 地址及其在流量中出現的次數。
+ *     tags: [flow]
+ *     responses:
+ *       200:
+ *         description: 成功取得 IP 出現次數。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   ip:
+ *                     type: string
+ *                     description: IP 地址
+ *                     example: "::ffff:192.168.159.128"
+ *                   count:
+ *                     type: number
+ *                     description: 該 IP 地址出現的次數
+ *                     example: 118
+ *                 required:
+ *                   - ip
+ *                   - count
+ *               example:
+ *                 - ip: "::ffff:10.231.2.2"
+ *                   count: 1
+ *                 - ip: "::ffff:98.11.235.11"
+ *                   count: 1
+ *                 - ip: "::ffff:192.168.159.128"
+ *                   count: 118
+ *                 - ip: "::ffff:192.168.159.129"
+ *                   count: 118
+ *       404:
+ *         description: Failed to retrieve IP count data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve IP count data
+ */
+router.get('/ipCount', flowController.handleGetAllFlowIPCount);
+
+/**
+ * @swagger
  * /flow/protocolCount:
  *   get:
  *     summary: 取得各種協定的流量計數
@@ -135,13 +188,26 @@ router.get('/ip/:ip', flowController.handleGetFlowByIP);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               additionalProperties:
- *                 type: integer
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   protocol:
+ *                     type: string
+ *                     description: 協定名稱
+ *                     example: "TCP"
+ *                   count:
+ *                     type: number
+ *                     description: 該協定出現的次數
+ *                     example: 118
+ *                 required:
+ *                   - porotocol
+ *                   - count
  *               example:
- *                 TCP: 120
- *                 UDP: 80
- *                 ICMP: 10
+ *                 - protocol: "TCP"
+ *                   count: 320
+ *                 - protocol: "UDP"
+ *                   count: 20
  *       404:
  *         description: Failed to retrieve protocol count data.
  *         content:
@@ -197,6 +263,94 @@ router.get('/protocolCount', flowController.handleGetAllFlowProtocolCount);
  *                   example: Failed to retrieve top X days flow data
  */
 router.get('/day/:xDay', flowController.handleGetTopXDayFlow);
+
+/**
+ * @swagger
+ * /flow/24Hour/everyFlowCount:
+ *   get:
+ *     summary: 取得過去 24 小時內每個 Flow 的流量計數
+ *     description: 回傳過去 24 小時內每個 Flow 的流量計數，包含兩端 IP 及其對應的流量數量。
+ *     tags: [flow]
+ *     responses:
+ *       200:
+ *         description: 成功取得過去 24 小時內每個 Flow 的流量計數。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   pointA:
+ *                     type: string
+ *                     format: ipv6
+ *                     example: "2001::0370"
+ *                   pointB:
+ *                     type: string
+ *                     format: ipv6
+ *                     example: "2001::7334"
+ *                   count:
+ *                     type: integer
+ *                     example: 15
+ *       404:
+ *         description: Failed to retrieve top X days flow data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve top X days flow data
+ */
+router.get('/24Hour/everyFlowCount', flowController.handleGet24HourFlowCount);
+
+/**
+ * @swagger
+ * /flow/24Hour/perHourAllFlowCount:
+ *   get:
+ *     summary: 取得過去 24 小時內每個小時的總流量計數
+ *     description: 回傳過去 24 小時內每個小時的總流量計數，已經自動填滿沒有流量的時間點為 0，並依照目前的時間點前 24 小時的小時排序。
+ *     tags: [flow]
+ *     responses:
+ *       200:
+ *         description: 成功取得過去 24 小時內每個小時的流量計數。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   pointA:
+ *                     type: string
+ *                     format: ipv6
+ *                     example: "2001::0370"
+ *                   pointB:
+ *                     type: string
+ *                     format: ipv6
+ *                     example: "2001::7334"
+ *                   count:
+ *                     type: integer
+ *                     example: 15
+ *       404:
+ *         description: Failed to retrieve top X days flow data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve top X days flow data
+ */
+router.get('/24Hour/perHourAllFlowCount', flowController.handleGetPerHourAllFlowCount);
 
 module.exports = router;
 
