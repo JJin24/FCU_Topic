@@ -15,7 +15,7 @@ const alertController = require('../controllers/alertController');
  * /alert/:
  *   get:
  *     summary: 取得全部警告流量
- *     description: 回傳全部時間網路流量中有發生警告的流量陣列。
+ *     description: 回傳全部時間網路流量中有發生警告的流量陣列。同一個 flow 如果 src_ip 與 dst_ip 都有被記錄在 host 中的話，其會顯示兩筆的資訊在此。若兩者皆未被記錄在 host 中，則不會顯示該筆 alert。
  *     tags: [alert]
  *     responses:
  *       200:
@@ -30,6 +30,9 @@ const alertController = require('../controllers/alertController');
  *                   uuid:
  *                     type: string
  *                     example: "1ffd7038-80fa-11f0-8f78-0672876e5546"
+ *                   hostname:
+ *                     type: string
+ *                     example: "VM1"
  *                   timestamp:
  *                     type: string
  *                     format: date-time
@@ -82,7 +85,7 @@ router.get('/', alertController.handleGetAllAlert);
  * /alert/status/notDeal:
  *   get:
  *     summary: 取得尚未處理的警告流量
- *     description: 回傳 status 為 false (尚未處理) 的警告流量陣列。
+ *     description: 回傳 status 為 false (尚未處理) 的警告流量陣列。同一個 flow 如果 src_ip 與 dst_ip 都有被記錄在 host 中的話，其會顯示兩筆的資訊在此。若兩者皆未被記錄在 host 中，則不會顯示該筆 alert。
  *     tags: [alert]
  *     responses:
  *       200:
@@ -97,6 +100,9 @@ router.get('/', alertController.handleGetAllAlert);
  *                   uuid:
  *                     type: string
  *                     example: "1ffd7038-80fa-11f0-8f78-0672876e5546"
+ *                   hostname:
+ *                     type: string
+ *                     example: "VM1"
  *                   timestamp:
  *                     type: string
  *                     format: date-time
