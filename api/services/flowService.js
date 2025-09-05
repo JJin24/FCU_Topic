@@ -61,11 +61,12 @@ async function getFlowByIP(ip){
     conn = await pool.getConnection();
 
     const ipFlow = await conn.query(
-      "SELECT uuid, timestamp, src_ip, src_port, dst_ip, dst_port, protocol_list.name AS protocol, label_list.name AS label, score, status \
+      "SELECT uuid, timestamp, src_ip, src_port, dst_ip, dst_port, protocol_list.name AS protocol, label_list.name AS label, score, alert_history.status \
       FROM flow \
       LEFT JOIN alert_history ON flow.id = alert_history.id \
-      LEFT JOIN label_list ON alert_history.label = label_list.label_id  \
-      FROM flow, alert_history WHERE src_ip = ? OR dst_ip = ?",
+      LEFT JOIN label_list ON alert_history.label = label_list.label_id \
+      LEFT JOIN protocol_list ON flow.protocol = protocol_list.protocol \
+      WHERE src_ip = ? OR dst_ip = ?",
       [ip, ip]
     )
     console.log(ipFlow);
@@ -235,6 +236,27 @@ async function getPerHourAllFlowCount(){
   }
 }
 
+async function getGoodMalCount(){
+  var conn;
+  try{
+    conn = await pool.getConnection();
+
+    const [goodMalCount] = await conn.query(
+      "SELECT COUNT(CASE WHEN AH.ID IS NULL THEN F.ID END) AS goodFlowCount, COUNT(AH.ID) AS badFlowCount \
+      FROM flow F \
+      LEFT JOIN alert_history AH ON F.ID = AH.ID;"
+    )
+    console.log(goodMalCount);
+    return goodMalCount;
+  }
+  catch(err){
+    console.error('Error in getGoodMalCount', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+}
+
 module.exports = {
   getAllFlow,
   getFlowByUUID,
@@ -243,5 +265,6 @@ module.exports = {
   getFlowProtocolCount,
   getTopXDayFlow,
   get24HourFlowCount,
-  getPerHourAllFlowCount
+  getPerHourAllFlowCount,
+  getGoodMalCount
 };
