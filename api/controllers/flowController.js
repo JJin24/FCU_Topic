@@ -96,6 +96,17 @@ const handleGetPerHourAllFlowCount = async (req, res) => {
   }
 };
 
+const handleGetGoodMalCount = async (req, res) => {
+  const result = await flowService.getGoodMalCount();
+
+  if (result) {
+    res.json(result);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve good/malicious flow count data' });
+  }
+};
+
 module.exports = {
   handleGetAllFlow,
   handleGetFlowByUUID,
@@ -104,5 +115,6 @@ module.exports = {
   handleGetAllFlowProtocolCount,
   handleGetTopXDayFlow,
   handleGet24HourFlowCount,
-  handleGetPerHourAllFlowCount
+  handleGetPerHourAllFlowCount,
+  handleGetGoodMalCount
 };

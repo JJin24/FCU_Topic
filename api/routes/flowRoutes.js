@@ -352,6 +352,44 @@ router.get('/24Hour/everyFlowCount', flowController.handleGet24HourFlowCount);
  */
 router.get('/24Hour/perHourAllFlowCount', flowController.handleGetPerHourAllFlowCount);
 
+/**
+ * @swagger
+ * /flow/goodMalCount:
+ *   get:
+ *     summary: 取得資料庫中全部良性與惡性流量的計數
+ *     description: 回傳資料庫中，良性與惡性流量的總計數。
+ *     tags: [flow]
+ *     responses:
+ *       200:
+ *         description: 成功取得全部良性與惡性流量的計數。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               goodFlowCount:
+ *                 type: object
+ *               badFlowCount:
+ *                 type: object
+ *               example:
+ *                 goodFlowCount: 5000
+ *                 badFlowCount: 1500
+ *                   
+ *       404:
+ *         description: Failed to retrieve top X days flow data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve top X days flow data
+ */
+router.get('/goodMalCount', flowController.handleGetGoodMalCount);
+
 module.exports = router;
 
 /**
