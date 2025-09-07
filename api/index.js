@@ -22,12 +22,15 @@ const options = {
 
 const swaggerSpec = swaggerJSDoc(options);
 
+index.use(express.json());
+
 const flowRouter = require('./routes/flowRoutes');
 const hostRouter = require('./routes/hostRoutes');
 const alertRouter = require('./routes/alertRoutes');
 const labelListRouter = require('./routes/labelListRoutes');
 const protocolListRouter = require('./routes/protocolListRoutes');
 const dayRouter = require('./routes/dayRoutes');
+const notifyRouter = require('./routes/notifyRoutes');
 
 
 // 只要是 /flow 開頭的路由都交給 flowRouter 處理
@@ -38,6 +41,7 @@ index.use('/alert', alertRouter);
 index.use('/labelList', labelListRouter);
 index.use('/protocolList', protocolListRouter);
 index.use('/day', dayRouter);
+index.use('/notify', notifyRouter);
 
 index.get('/', (req, res) => {
   res.send('The server is running');
