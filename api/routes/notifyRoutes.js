@@ -62,4 +62,46 @@ const notifyController = require('../controllers/notifyController');
  */
 router.post('/alert', notifyController.handlePostAlert);
 
+/**
+ * @swagger
+ * /notify/newDevice:
+ *   post:
+ *     summary: 新用戶開啟手機時自動註冊裝置
+ *     description: 新用戶開啟手機應用程式時自動將 deviceName 及 fcmToken 透過此 API 註冊到資料表中，方便後續發送相關的通知。
+ *     tags: [notify]
+ *     requestBody:
+ *       discription: 裝置名稱和 fcmToken
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               deviceName:
+ *                 type: string
+ *                 format: hostname
+ *                 example: Phone
+ *               fcmToken:
+ *                 type: string
+ *                 example: sf23f5asf65s1c6svavsdfasdf              
+ *     responses:
+ *       200:
+ *         description: 成功發送註冊訊息。
+ *      
+ *       404:
+ *         description: Failed to register.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to register new device
+ */
+router.post('/newDevice', notifyController.handlePostNewDevice);
+
 module.exports = router;

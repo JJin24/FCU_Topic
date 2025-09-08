@@ -1,3 +1,4 @@
+const { notify } = require('../routes/hostRoutes');
 const notifyService = require('../services/notifyService');
 
 const handlePostAlert = async (req, res) => {
@@ -16,6 +17,23 @@ const handlePostAlert = async (req, res) => {
   }
 };
 
+const handlePostNewDevice = async (req, res) => {
+  console.log("Post new device notification");
+  const notifyData = req.body;
+
+  const deviceName = notifyData.deviceName || "未知裝置";
+  const fcmToken = notifyData.fcmToken || "-";
+
+  const result = await notifyService.addNewDevice(deviceName, fcmToken);
+
+  if (result) {
+    res.json({ message: 'New device added successfully' });
+  } else {
+    res.status(500).json({ title: '500 Internal Server Error', message: 'Failed to add new device' });
+  }
+};
+
 module.exports = {
-  handlePostAlert
+  handlePostAlert,
+  handlePostNewDevice
 };
