@@ -23,7 +23,29 @@ async function postNotification(title, body) {
   }  
 };
 
+async function addNewDevice(deviceName, fcmToken) {
+  var conn;
+  try{
+    console.log("Add new device in notifyService");
+    conn = await pool.getConnection();
+
+    const result = await conn.query(
+      "INSERT INTO notification_token (notification_token.name, FCMToken) VALUES (?, ?);",
+      [deviceName, fcmToken]
+    );
+    console.log("Insert result: " + JSON.stringify(result));
+    return true;
+  }
+  catch(err){
+    console.error('Error in addNewDevice', err);
+    return false;
+  }
+  finally {
+    if (conn) conn.release(); // Release the connection back to the pool
+  }
+};
 
 module.exports = {
-  postNotification
+  postNotification,
+  addNewDevice
 };
