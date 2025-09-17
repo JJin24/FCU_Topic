@@ -19,3 +19,7 @@ MARIADB_PORT =
 MARIADB_USER = ''
 MARIADB_PASSWORD = ''
 MARIADB_DATABASE = ''
+
+# 定義區 (API)
+API_HOST = ''
+TIME_LIMIT = '' # 設定發送通知冷卻限制時間 (s)
