@@ -122,9 +122,9 @@ find "$input_top_folder" -mindepth 1 -maxdepth 1 -type d | while read -r input_s
     # Execute the conversion tool with the correct arguments for the chosen mode
     if [[ "$option" == "-f" || "$option" == "--flow" || "$option" == "-1" || "$option" == "--hast-1" || "$option" == "HAST-I" ]]; then
         "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$m_byte"
-    else if [[ "$option" == "-p" || "$option" == "--packet" || "$option" == "-2" || "$option" == "--hast-2" || "$option" == "HAST-II" ]]; then
+    elif [[ "$option" == "-p" || "$option" == "--packet" || "$option" == "-2" || "$option" == "--hast-2" || "$option" == "HAST-II" ]]; then
         "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$n_pkt" "$m_byte" "de_addr_noise"
-    else if [[ "$option" == "-3"]]; then
+    elif [[ "$option" == "-3" ]]; then
         "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$n_pkt" "$m_byte" "de_addr_noise"
     else # -4
         "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$n_pkt" "$m_byte" "de_addr_noise"
