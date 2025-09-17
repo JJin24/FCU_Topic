@@ -6,7 +6,7 @@
 # Gemini 更動調整，避免壟餘的程式碼，並增加錯誤處理。
 
 # --- Configuration ---
-# The path to the conversion tool
+# The path to the conversion tool (需要到此目錄下 /USTC 才可執行此腳本)
 convert_tool="./Flow2img" 
 
 n_pkt="6"
@@ -28,6 +28,8 @@ usage() {
     echo "Options:"
     echo "  -f, --flow, -1, --hast-1, HAST-I    Use HAST-I conversion (flow-based)."
     echo "  -p, --packet, -2, --hast-2, HAST-II Use HAST-II conversion (packet-based)."
+    echo "  -3  將 Flow 換成 h: n_bytes / 16, w: 16 的灰階圖片"
+    echo "  -4  將 Flow 中每三個封包換成 h: n_bytes / 16, w: 16 的彩色圖片"
     echo "  -h, --help                          Display this help message."
     echo ""
     echo "Example:"
@@ -83,6 +85,14 @@ case "$option" in
         echo "Mode: HAST-II (packet-based) selected."
         # The `find` loop will handle the rest of the arguments
         ;;
+    -3)
+        echo "Mode: HAST-I_v2 (flow-based) with grayscale images selected."
+        # The `find` loop will handle the rest of the arguments
+        ;;
+    -4)
+        echo "Mode: HAST-I_v3 (flow-based) with color images selected."
+        # The `find` loop will handle the rest of the arguments
+        ;;  
     *)
         echo "Error: Invalid option '$option'."
         usage
@@ -112,8 +122,12 @@ find "$input_top_folder" -mindepth 1 -maxdepth 1 -type d | while read -r input_s
     # Execute the conversion tool with the correct arguments for the chosen mode
     if [[ "$option" == "-f" || "$option" == "--flow" || "$option" == "-1" || "$option" == "--hast-1" || "$option" == "HAST-I" ]]; then
         "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$m_byte"
-    else # HAST-II mode
-        "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$n_pkt" "$m_byte"
+    else if [[ "$option" == "-p" || "$option" == "--packet" || "$option" == "-2" || "$option" == "--hast-2" || "$option" == "HAST-II" ]]; then
+        "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$n_pkt" "$m_byte" "de_addr_noise"
+    else if [[ "$option" == "-3"]]; then
+        "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$n_pkt" "$m_byte" "de_addr_noise"
+    else # -4
+        "$convert_tool" "$option" "$input_subdir" "$output_subdir" "$n_pkt" "$m_byte" "de_addr_noise"
     fi
 done
 
