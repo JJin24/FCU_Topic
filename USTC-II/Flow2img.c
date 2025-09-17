@@ -249,7 +249,7 @@ void save_color_image_png(const char * filename, int row, uint8_t image[3][row][
         }
     }
 
-    if(stbi_write_png(filename, 16, row, 3, image_interleaved, 16 * sizeof(unsigned char)) == 0) {
+    if(stbi_write_png(filename, 16, row, 3, image_interleaved, 16 * 3 * sizeof(unsigned char)) == 0) {
         fprintf(stderr, "Error saving Color PNG image to %s\n", filename);
         return;
     }
