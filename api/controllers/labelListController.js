@@ -11,6 +11,20 @@ const handleGetAllLabelList = async (req, res) => {
   }
 };
 
+const handleGetLabelNameByID = async (req, res) => {
+  const { id } = req.params;
+  console.log("Find label ID \'", + id, "\''s name");
+  const labelName = await labelListService.getLabelNameByID(id);
+
+  if (labelName){
+    res.json(labelName);
+  }
+  else{
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve label id data' });
+  }
+}
+
 module.exports = {
-  handleGetAllLabelList
+  handleGetAllLabelList,
+  handleGetLabelNameByID
 };

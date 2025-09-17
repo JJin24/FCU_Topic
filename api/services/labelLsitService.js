@@ -19,6 +19,27 @@ async function getAllLabelList() {
   }
 };
 
+async function getLabelNameByID(id){
+  var conn;
+
+  try{
+    conn = await pool.getConnection();
+
+    const labelName = await conn.query(
+      "SELECT name FROM label_list WHERE label_id = ?", [id]
+    )
+    console.log(labelName);
+    return labelName;
+  }
+  catch(err){
+    console.error('Error in getLabelNameByID', err);
+  }
+  finally{
+    if (conn) conn.release();
+  }
+}
+
 module.exports = {
-  getAllLabelList
+  getAllLabelList,
+  getLabelNameByID
 };
