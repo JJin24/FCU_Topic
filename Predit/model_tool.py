@@ -6,6 +6,7 @@ from torchvision import transforms
 import config
 import mariadb_tool
 import json
+import predit_api
 
 def load_images_from_hset(hset: dict):
     """
@@ -124,6 +125,8 @@ def save_results(rDB, mDB, result, hset):
                 'label': str(pred_class)
             }
             mariadb_tool.insert_data(mDB, 'alert_history', alert_data)
+            predit_api.send_alert_notification(str(pred_class), metadata.get('d_ip') + ':' + metadata.get('d_port'),
+                                    metadata.get('timestamp'), str(score))
 
     except Exception as e:
         print(f"儲存結果到 MariaDB 時發生錯誤: {e}")
