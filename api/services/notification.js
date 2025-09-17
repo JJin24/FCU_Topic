@@ -21,7 +21,7 @@ const sendNotificationToMulti = async (registrationTokens, title, body) => {
     },
     android: {
       notification: {
-        channelId: 'High Importance Notification' 
+        channelId: 'high_importance_channel'
       }
     },
     tokens: registrationTokens
