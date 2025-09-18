@@ -189,70 +189,86 @@ static void handle_client_data(int epoll_fd, client_info *ci, ThreadPool *pool) 
     ssize_t count;
     
     // 讀取資料到 buffer 中 (header 和 body 兩者是單一事件 epoll 為 ET Mode，請見 Line 151 的說明)
-    while ((count = read(ci->fd, ci->buffer + ci->received, ci->to_read - ci->received)) > 0) {
-        ci->received += count;
-    }
+    while (1) {
+        count = read(ci->fd, ci->buffer + ci->received, ci->to_read - ci->received);
 
-    // 根據目前的狀態處理資料
-    if (ci->received == ci->to_read) {
-        if (ci->state == STATE_READ_HEADER) {
-            uint32_t body_size = ntohl(*(uint32_t*)ci->buffer);
-            printf("fd %d: Header received, body size = %u\n", ci->fd, body_size);
-            
-            if (body_size != sizeof(Flow2img_II_context)) {
-                 fprintf(stderr, "fd %d: Invalid body size %u. Expected %zu\n", ci->fd, body_size, sizeof(Flow2img_II_context));
-                 goto close_conn;
+        // 錯誤
+        if (count == -1){
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
             }
-
-            ci->state = STATE_READ_BODY;
-            ci->to_read = body_size;
-            ci->received = 0;
-            free(ci->buffer);
-            ci->buffer = malloc(body_size);
-            if (!ci->buffer) {
-                perror("malloc for body buffer");
-                goto close_conn;
-            }
-
-        } else if (ci->state == STATE_READ_BODY) {
-            printf("fd %d: Body received, processing...\n", ci->fd);
-            
-            Flow2img_II_context *task_arg = malloc(sizeof(Flow2img_II_context));
-            if (!task_arg) {
-                 perror("malloc for task argument");
-                 goto close_conn;
-            }
-            memcpy(task_arg, ci->buffer, sizeof(Flow2img_II_context));
-
-            /*
-             * 將大端序的資訊轉換為小端序
-             * 
-             * 注意：如果要轉換 buffer 內的內容時，建議先複製一份出來，在進行轉換
-             * 避免修改的過程因為 struct 的對齊機制導致資料錯亂。
-             * 
-             * 需要大小端序轉換的資訊有：
-             * 除了 uint8_t 和 char 類型及其陣列類型的資料外，
-             * 其他都需要轉換大小端序。
-             * 例如：int[32] (內部的每一個元素都要單獨轉換)，uint32_t，long int 等
-             */
-            task_arg->pcap_size = ntohl(task_arg->pcap_size);
-            task_arg->s_port = ntohs(task_arg->s_port);
-            task_arg->d_port = ntohs(task_arg->d_port);
-
-            if (thread_pool_add_task(pool, Flow2img_HAST_Two, task_arg) != 0) {
-                fprintf(stderr, "Failed to add task to thread pool.\n");
-                free(task_arg);
-            }
-            
-            ci->state = STATE_READ_HEADER;
-            ci->to_read = sizeof(uint32_t);
-            ci->received = 0;
-            free(ci->buffer);
-            ci->buffer = malloc(ci->to_read);
+            perror("Read socket error:");
+            goto close_conn;
         }
-    } else if (count == 0 || (count < 0 && errno != EAGAIN)) {
-        goto close_conn;
+
+        // 對方連線退出
+        if (count == 0){
+            fprintf(stdout, "%d close connect", ci->fd);
+            goto close_conn;
+        }
+
+        ci->received += count;
+
+        // 根據目前的狀態處理資料
+        if (ci->received == ci->to_read) {
+            if (ci->state == STATE_READ_HEADER) {
+                uint32_t body_size = ntohl(*(uint32_t*)ci->buffer);
+                printf("fd %d: Header received, body size = %u\n", ci->fd, body_size);
+
+                if (body_size != sizeof(Flow2img_II_context)) {
+                     fprintf(stderr, "fd %d: Invalid body size %u. Expected %zu\n", ci->fd, body_size, sizeof(Flow2img_II_context));
+                     goto close_conn;
+                }
+
+                ci->state = STATE_READ_BODY;
+                ci->to_read = body_size;
+                ci->received = 0;
+                free(ci->buffer);
+                ci->buffer = malloc(body_size);
+                if (!ci->buffer) {
+                    perror("malloc for body buffer");
+                    goto close_conn;
+                }
+
+            } else if (ci->state == STATE_READ_BODY) {
+                printf("fd %d: Body received, processing...\n", ci->fd);
+
+                Flow2img_II_context *task_arg = malloc(sizeof(Flow2img_II_context));
+                if (!task_arg) {
+                     perror("malloc for task argument");
+                     goto close_conn;
+                }
+                memcpy(task_arg, ci->buffer, sizeof(Flow2img_II_context));
+
+                /*
+                 * 將大端序的資訊轉換為小端序
+                 * 
+                 * 注意：如果要轉換 buffer 內的內容時，建議先複製一份出來，在進行轉換
+                 * 避免修改的過程因為 struct 的對齊機制導致資料錯亂。
+                 * 
+                 * 需要大小端序轉換的資訊有：
+                 * 除了 uint8_t 和 char 類型及其陣列類型的資料外，
+                 * 其他都需要轉換大小端序。
+                 * 例如：int[32] (內部的每一個元素都要單獨轉換)，uint32_t，long int 等
+                 */
+                task_arg->pcap_size = ntohl(task_arg->pcap_size);
+                task_arg->s_port = ntohs(task_arg->s_port);
+                task_arg->d_port = ntohs(task_arg->d_port);
+
+                if (thread_pool_add_task(pool, Flow2img_HAST_Two, task_arg) != 0) {
+                    fprintf(stderr, "Failed to add task to thread pool.\n");
+                    free(task_arg);
+                }
+
+                ci->state = STATE_READ_HEADER;
+                ci->to_read = sizeof(uint32_t);
+                ci->received = 0;
+                free(ci->buffer);
+                ci->buffer = malloc(ci->to_read);
+            }
+        }
     }
+
     
     return;
 
