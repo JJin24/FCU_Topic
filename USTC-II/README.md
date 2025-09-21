@@ -30,10 +30,12 @@ make
 
 相關處理方式請參考 [HAST-IDS: Learning Hierarchical Spatial-Temporal Features Using Deep Neural Networks to Improve Intrusion Detection](https://ieeexplore.ieee.org/document/8171733) 這篇論文。
 
-對於 [Flow2img](./Flow2img.c) 程式來說，他將支援兩種模式的圖片轉換，`HAST_ONE` 及 `HAST_TWO` 兩種模式。其同時也是 `Flow2img_II` 及 `HAST_Two`  兩個程式的原型。
+對於 [Flow2img](./Flow2img.c) 程式來說，他將支援四種模式的圖片轉換，`HAST_ONE`、`HAST_TWO`、`HAST_THREE` 及 `HAST_FOUR` 四種模式。其同時也是 `Flow2img_II` 及 `HAST_Two`  兩個程式的原型。
 
 - `HAST_ONE`：從一個 pcap 檔案中提取前 n 位元組出來，轉換成一個 one hot encoded 編碼的圖片。
-- `HAST_TWO`：從一個 pcap 檔案中，提取前 n 的封包，再從每一個封包中提取前 m 位元組出來，轉換成一個 one hot encoded 的圖片。
+- `HAST_TWO`：從一個 pcap 檔案中，提取前 n 的封包，再從每一個封包中提取前 m 位元組出來，轉換成一個 one hot encoded 的圖片序列。
+- `HSAT_THREE` : 從一個 pcap 檔案中，提取前 n 的封包，再從每一個封包中提取前 m 位元組出來，轉換成一個 h: m/16, w: 16 大小的灰階圖片序列。
+- `HSAT_FOUR` : 從一個 pcap 檔案中，提取前 n 的封包，再從每一個封包中提取前 m 位元組出來，轉換成一個 h: m/16, w: 16 大小的灰階圖片序列後，以每三個為一組 `img_0'` (R, G, B) 為灰階影像序列的 (img_0, img_1, img_2)，組成一張彩色的影像。
 
 > [!NOTE]
 > 可拓展選項 [de_addr_noise](./de_addr_noise.c)
@@ -42,23 +44,35 @@ make
 
 ### 使用方式
 
-1. 顯示說明
+- 顯示說明
 
-```bash
-./Flow2img -h
-```
+    ```bash
+    ./Flow2img -h
+    ```
 
-2. 使用 `HAST_ONE` 模式，將存有 pcap 的資料夾 `<pcap_folder>` 中的所有 `.pcap` 檔案提取前 `<m_bytes>` 位元組後，將輸出的圖片存放在 `<output_img_folder>` 中。(可選用 `<opt>` 將第一個封包的 MAC Address 及 IP Address 去除)
+- 使用 `HAST_ONE` 模式，將存有 pcap 的資料夾 `<pcap_folder>` 中的所有 `.pcap` 檔案提取前 `<m_bytes>` 位元組後，將輸出的圖片存放在 `<output_img_folder>` 中。(可選用 `<opt>` 將第一個封包的 MAC Address 及 IP Address 去除)。
 
-```bash
-./Flow2img -1 <pcap_folder> <output_img_folder> <m_bytes> <opt>
-```
+    ```bash
+    ./Flow2img -1 <pcap_folder> <output_img_folder> <m_bytes> <opt>
+    ```
 
-3. 使用 `HAST_TWO` 模式，將存有 pcap 的資料夾 `<pcap_folder>` 中的所有 `.pcap` 檔案先提取前 `<n_packets>` 個封包後，並且再從每一個封包中提取前 `<m_bytes>` 後做 one hot encoded 轉換成圖片 (對於未滿足 `<n_packets>` 及 `<m_bytes>` 條件的封包將會自動填補空圖片或是空像素)。將輸出的圖片存入 `<output_img_folder>` 資料夾中。(可選用 `<opt>` 將封包的 MAC Address 及 IP Address 去除)
+- 使用 `HAST_TWO` 模式，將存有 pcap 的資料夾 `<pcap_folder>` 中的所有 `.pcap` 檔案先提取前 `<n_packets>` 個封包後，並且再從每一個封包中提取前 `<m_bytes>` 後做 one hot encoded 轉換成圖片 (對於未滿足 `<n_packets>` 及 `<m_bytes>` 條件的封包將會自動填補空圖片或是空像素)。將輸出的圖片存入 `<output_img_folder>` 資料夾中。(可選用 `<opt>` 將封包的 MAC Address 及 IP Address 去除)。
 
-```bash
-./Flow2img -2 <pcap_folder> <output_img_folder> <n_packets> <m_bytes> <opt>
-```
+    ```bash
+    ./Flow2img -2 <pcap_folder> <output_img_folder> <n_packets> <m_bytes> <opt>
+    ```
+
+- 使用 `HAST_THREE` 模式，將存有 pcap 的資料夾 `<pcap_folder>` 中的所有 `.pcap` 檔案先提取前 `<n_packets>` 個封包後，並且再從每一個封包中提取前 `<m_bytes>` 後，將其轉換成圖片高 `<m_byte>/16` 寬 `16` 的灰階影像 (對於未滿足 `<n_packets>` 及 `<m_bytes>` 條件的封包將會自動填補空圖片或是空像素，若 ，`<m_byte>` 無法被 16 整除的話，將會自動的加上一行，確保輸出的圖片至少含有 `<m_byte>` 像素)。將輸出的圖片存入 `<output_img_folder>` 資料夾中。(可選用 `<opt>` 將封包的 MAC Address 及 IP Address 去除)。 
+
+    ```bash
+    ./Flow2img -3 <pcap_folder> <output_img_folder> <n_packets> <m_bytes> <opt>
+    ```
+
+- 使用 `HAST_FOUR` 模式，將存有 pcap 的資料夾 `<pcap_folder>` 中的所有 `.pcap` 檔案先提取前 `<n_packets>` 個封包後，並且再從每一個封包中提取前 `<m_bytes>` 後，將其轉換成圖片高 `<m_byte>/16` 寬 `16` 的彩色影像 (對於未滿足 `<n_packets>` 及 `<m_bytes>` 條件的封包將會自動填補空圖片或是空像素，若 ，`<m_byte>` 無法被 16 整除的話，將會自動的加上一行，確保輸出的圖片至少含有 `<m_byte>` 像素。對於未滿足 RGB 三通道的圖片，將會自動為其補上空顏色通道)。將輸出的圖片存入 `<output_img_folder>` 資料夾中。(可選用 `<opt>` 將封包的 MAC Address 及 IP Address 去除)。 
+
+    ```bash
+    ./Flow2img -4 <pcap_folder> <output_img_folder> <n_packets> <m_bytes> <opt>
+    ```
 
 > [!NOTE]
 > 拓展使用
