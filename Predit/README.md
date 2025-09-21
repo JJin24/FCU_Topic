@@ -20,7 +20,8 @@ pip install -r requirements.txt
     PCAP、辨識結果等等至 MariaDB 中，並透過冷卻時間來判斷是否將此比惡意流量透過 API 來發送通知給應用程式。
 - 其餘檔案 `./predit_*.py` 為實驗用來，主要為測試模型的預測結果使用。
     
-    > [!WARNING]  其餘檔案 `./predit_*.py` 注意事項
+    > [!WARNING]
+    > 其餘檔案 `./predit_*.py` 注意事項
     > 
     > 其餘檔案 `./predit_*.py` 由於會需要大量的修改，因此若要查看最新的檔案或是測試結果，請至 [OneDrive](https://drive.jjin24.com) 中資料夾查看模型、訓練程式及所對應的結果。
     > 相關檔案將會在專題結束後最統一的整理，在整理前，請忽略這些檔案的存在及更新。

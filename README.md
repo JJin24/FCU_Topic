@@ -2,9 +2,10 @@
 
 根目錄中的 [deal.py](/deal.py) 及 [count_protocol.py](/count_protocol.py) 主要處理透過 CSV 中所提供的資訊，在原始的 PCAP 中提取相對應的 Packets 出來。
 
-[Model_Training](/Model_Training) 中所以存放的資料是在訓練模型所使用的程式。
-
-裡面的 [Autoencoder](/Model_Training/Autoencoder) 資料夾中的所有檔案是與訓練 Autoencoder 模型相關的。詳情請看 [Readme](/Model_Training/Autoencoder/README.md)。
+- [USTC-II](/USTC-II) 中存放的資料為封包轉圖片及流量抓取的相關程式。
+- [Predit](/Predit) 中存放的資料為模型判斷流量好壞的相關程式，並提供將結果上傳到 MariaDB 資料庫的程式。
+- [Model_Training](/Model_Training) 中所以存放的資料是在訓練模型所使用的程式。
+- [api](/api) 中存放的資料是在 API 的程式，此程式將提供前端與後端 SQL 通訊的程式及處理對手機應用程式的通知發送。
 
 其餘文檔可以查詢 [HackMD](https://hackmd.io/@imdog) 所提供的內容。
 
