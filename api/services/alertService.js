@@ -1,3 +1,4 @@
+const { post } = require('../routes/hostRoutes');
 const pool = require('./database');
 
 async function getAllAlert() {
@@ -76,7 +77,43 @@ async function getNotDealAlert(){
   }
 };
 
+async function postNewAlert(alertData) {
+  var conn;
+
+  try{
+    conn = await pool.getConnection();
+
+    const timestamp = alertData.timestamp || new Date().toISOString();
+    const src_ip = alertData.src_ip;
+    const src_port = alertData.src_port;
+    const dst_ip = alertData.dst_ip;
+    const dst_port = alertData.dst_port;
+    const protocol = alertData.protocol;
+    const label = alertData.label;
+    const score = alertData.score;
+    const pcap = alertData.pcap || null;
+
+    const result = await conn.query(
+      "INSERT INTO flow (flow.timestamp, flow.src_ip, flow.src_port, flow.dst_ip, flow.dst_port, flow.protocol) \
+       VALUES (?, ?, ?, ?, ?, ?); \
+       INSERT INTO alert_history (id, pcap, score, label) \
+       VALUES (LAST_INSERT_ID(), ?, ?, ?);",
+      [timestamp, src_ip, src_port, dst_ip, dst_port, protocol, pcap, score, label]
+    );
+    console.log(result);
+    return result;
+  }
+  catch(err){
+    console.error('Error in postNewAlert', err);
+    return null;
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+};
+
 module.exports = {
   getAllAlert,
-  getNotDealAlert
+  getNotDealAlert,
+  postNewAlert
 };
