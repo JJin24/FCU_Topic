@@ -150,5 +150,67 @@ router.get('/', alertController.handleGetAllAlert);
  */
 router.get('/status/notDeal', alertController.handleGetNotDealAlert);
 
+/**
+ * @swagger
+ * /alert/newAlert:
+ *   post:
+ *     summary: 提交新的警告流量
+ *     description: 辨識模型將可使用此 API 提交辨識異常之流量資訊及結果。
+ *     tags: [alert]
+ *     requestBody:
+ *       discription: 異常流量相關資訊
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               timestamp:
+ *                 type: string
+ *                 format: timestamp
+ *               src_ip:
+ *                 type: string
+ *                 format: ipv6
+ *               src_port:
+ *                 type: integer
+ *                 example: 443
+ *               dst_ip:
+ *                 type: string
+ *                 format: ipv6
+ *               dst_port:
+ *                 type: integer
+ *                 example: 80
+ *               protocol:
+ *                 type: integer
+ *                 example: 6
+ *               pcap:
+ *                 type: integer
+ *                 example: 7
+ *               score:
+ *                 type: number
+ *                 format: float
+ *                 example: 0.937
+ *               label:
+ *                 type: integer
+ *                 example: 7
+ *     responses:
+ *       200:
+ *         description: 成功紀錄異常流量。
+ *      
+ *       404:
+ *         description: Failed to record.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to record this alert
+ */
+router.post('/newAlert', alertController.handlePostNewAlert);
 
 module.exports = router;
