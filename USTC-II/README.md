@@ -12,10 +12,10 @@
 
 ## 編譯
 
-1. 請先安裝以下套件 `libpcap-dev`、`redis-server`、`redis-tools`
+1. 請先安裝以下套件 `libpcap-dev`、`redis-server`、`redis-tools`、`libhiredis-dev`、`libevent-dev`
 
 ```bash
-apt install libpcap-dev redis-server redis-tools
+apt install libpcap-dev redis-server redis-tools libhiredis-dev libevent-dev
 ```
 
 2. 在此資料夾中使用 `make` 指令將會自動編譯此上述的 4 個程式。
