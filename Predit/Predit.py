@@ -27,8 +27,7 @@ if __name__ == "__main__":
         tensor = model_tool.load_images_from_hset(hset)
 
         # 跳過所有 tensor 不足 N_PKTS 張圖片的情況
-        if tensor.numel() == config.N_PKTS:
-            print("No valid images found in HSET, skipping this entry.")
+        if tensor.numel() == 0 or tensor.shape[1] != config.N_PKTS:
             continue
 
         model_predit = model_tool.model_predit(tensor, model, deveice)

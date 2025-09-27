@@ -7,6 +7,7 @@ import config
 import mariadb_tool
 import json
 import predit_api
+import ipaddress
 
 def load_images_from_hset(hset: dict):
     """
@@ -18,7 +19,6 @@ def load_images_from_hset(hset: dict):
     """
     # 步驟 1: 定義通用的影像轉換流程
     transform = transforms.Compose([
-        transforms.Resize((64, 64)),  # 調整大小
         transforms.ToTensor()  # 轉換為 Tensor (會將像素值標準化到 [0, 1])
     ])
     
@@ -113,6 +113,11 @@ def save_results(rDB, mDB, result, hset):
             'dst_port' : metadata.get('d_port'),
             'protocol' : metadata.get('protocol')
         }
+
+        if ipaddress.ip_address(metadata.get('s_ip')).version == 4:
+            flow_info['src_ip'] = '::ffff:' + metadata.get('s_ip')
+            flow_info['dst_ip'] = '::ffff:' + metadata.get('d_ip')
+
         last_id = mariadb_tool.insert_data(mDB, 'flow', flow_info)
         print("Flow data inserted into MariaDB.")
         print(f"Type of last_id: {type(last_id)}, score: {type(score)}, pred_class: {type(pred_class)}")
