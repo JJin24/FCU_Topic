@@ -256,32 +256,55 @@ async function getGoodMalCount(){
   }
 }
 
-async function getAllLocationGoodMalCount() {
+async function getLocationGraph(locationName) {
   var conn;
   try {
     conn = await pool.getConnection();
 
-    const rows = await conn.query(
-      `SELECT
-        COALESCE(h.location, 'sum') AS location,
-        SUM(CASE WHEN f.id IS NOT NULL AND ah.id IS NULL THEN 1 ELSE 0 END) AS GoodCount,
-        SUM(CASE WHEN ah.id IS NOT NULL THEN 1 ELSE 0 END) AS MalCount
-      FROM
-        host h
-      LEFT JOIN
-        flow f ON (h.ip = f.src_ip OR h.ip = f.dst_ip) AND f.timestamp >= NOW() - INTERVAL 1 HOUR
-      LEFT JOIN
-        alert_history ah ON f.id = ah.id
-      GROUP BY
-        h.location WITH ROLLUP;`
-    );
-    console.log(rows);
+    const query = `
+      WITH RECURSIVE TimeSeries AS (
+        SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR) / 10) * 10) AS interval_start
+        UNION ALL
+        SELECT interval_start + INTERVAL 10 SECOND
+        FROM TimeSeries
+        WHERE interval_start + INTERVAL 10 SECOND < NOW()
+      ),
+      Flows AS (
+        SELECT 
+          f.id, 
+          f.timestamp, 
+          h.location, 
+          (ah.id IS NULL) AS is_good
+        FROM flow f
+        LEFT JOIN alert_history ah ON f.id = ah.id
+        JOIN host h ON (f.src_ip = h.ip OR f.dst_ip = h.ip)
+        WHERE f.timestamp >= NOW() - INTERVAL 1 HOUR
+      ),
+      Traffic AS (
+        SELECT timestamp, traffic
+        FROM traffic_table
+        WHERE timestamp >= NOW() - INTERVAL 1 HOUR
+      )
+      SELECT 
+        DATE_FORMAT(ts.interval_start, '%Y-%m-%dT%H:%i:%sZ') as interval_start,
+        COALESCE(SUM(CASE WHEN f.location = ? THEN f.is_good END), 0) AS location_good,
+        COALESCE(SUM(CASE WHEN f.location = ? AND NOT f.is_good THEN 1 ELSE 0 END), 0) AS location_mal,
+        COALESCE(SUM(f.is_good), 0) AS all_good,
+        COALESCE(SUM(CASE WHEN NOT f.is_good THEN 1 ELSE 0 END), 0) AS all_mal,
+        COALESCE(SUM(t.traffic), 0) AS all_traffic
+      FROM TimeSeries ts
+      LEFT JOIN Flows f ON f.timestamp >= ts.interval_start AND f.timestamp < ts.interval_start + INTERVAL 10 SECOND
+      LEFT JOIN Traffic t ON t.timestamp >= ts.interval_start AND t.timestamp < ts.interval_start + INTERVAL 10 SECOND
+      GROUP BY ts.interval_start
+      ORDER BY ts.interval_start;
+    `;
+
+    const rows = await conn.query(query, [locationName, locationName]);
     return rows;
-  }
-  catch (err) {
-    console.error('Error in getLocationGoodMalCount', err);
-  }
-  finally {
+  } catch (err) {
+    console.error('Error in getLocationGraph', err);
+    throw err;
+  } finally {
     if (conn) conn.release();
   }
 }
@@ -296,5 +319,5 @@ module.exports = {
   get24HourFlowCount,
   getPerHourAllFlowCount,
   getGoodMalCount,
-  getAllLocationGoodMalCount
+  getLocationGraph
 };
