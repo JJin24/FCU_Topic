@@ -29,19 +29,7 @@ int enable_save_files_global = 1 ; // 預設啟用儲存檔案，因為需要讀
 int select_interface = 1; 
 int promisc_mode = 1;  //混淆模式，預設開啟
 int del_pcap = 0 ;
-/*
-typedef struct {
-    uint8_t pcap_data[MAX_PCAP_DATA_SIZE];
-    uint32_t pcap_size;
-    char s_ip[INET_ADDRSTRLEN];
-    char d_ip[INET_ADDRSTRLEN];
-    int s_port;
-    int d_port;
-    char timestamp[64];
-    uint8_t protocol;
-} Flow2img_II_context;
-// --- 結束引入 ---
-*/
+
 // Flow 的資料結構
 typedef struct {
     char name[240]; 
@@ -195,6 +183,21 @@ void *process_packet(void *args) {
     }
 
     flow->packet_count++;
+    
+    // --- 檢查是否達到 N_PKTS ---
+    if (flow->packet_count == N_PKTS) {
+        char src_ip_str[INET_ADDRSTRLEN];
+        char dst_ip_str[INET_ADDRSTRLEN];
+        uint16_t src_p = 0;
+        uint16_t dst_p = 0;
+        uint8_t proto = 0;
+        sscanf(flow->name, "%[^_]_%hu-%[^_]_%hu_%hhu", 
+               src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
+
+        // 呼叫清理函式，此函式包含讀檔、傳送 Socket 等 I/O 操作，因此不在 Mutex 鎖內執行
+        cleanup_flow_and_send(flow, src_ip_str, dst_ip_str, src_p, dst_p, proto);
+    }
+
     free(thread_args);
     return NULL;
 }
@@ -386,7 +389,6 @@ int main() {
     pthread_detach(flow_timeout_tid);
 
     pcap_t *handle = NULL;
-    if (select_interface) {
         if (pcap_findalldevs(&alldevs, errbuf) == -1) {
             fprintf(stderr, "Error in pcap_findalldevs: %s\n", errbuf);
             return 1;
@@ -442,11 +444,6 @@ int main() {
         }
         printf("Start sniffing on interface %s...\n", dev->name);
 
-    } else {
-        fprintf(stderr, "Listening on all interfaces is not fully supported in this simplified model.\n");
-        return 1;
-    }
-
     pcap_loop(handle, -1, packet_handler, NULL);
 
     pcap_close(handle);
@@ -454,6 +451,7 @@ int main() {
         pcap_freealldevs(alldevs);
     }
     
+    //程式結束前，把記憶體中尚未處理完的 flow 資料清理掉。
     for (int j = 0; j < MAX_FLOWS; j++) {
         if (flows[j] != NULL) {
             char src_ip_str[INET_ADDRSTRLEN];
