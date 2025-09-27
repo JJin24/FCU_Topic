@@ -430,7 +430,7 @@ router.get('/goodMalCount', flowController.handleGetGoodMalCount);
  *                   type: string
  *                   example: Failed to retrieve location good/malicious flow count data
  */
-router.get('/location/goodMalCount', flowController.handleGetLocationGoodMalCount);
+router.get('/location/goodMalCount', flowController.handleGetAllLocationGoodMalCount);
 
 module.exports = router;
 
