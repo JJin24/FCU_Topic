@@ -1,4 +1,3 @@
-const { get } = require('../routes/hostRoutes');
 const pool = require('./database');
 
 // getFlow 會取得 flow 資料表的後 1000 筆資料
@@ -257,6 +256,36 @@ async function getGoodMalCount(){
   }
 }
 
+async function getAllLocationGoodMalCount() {
+  var conn;
+  try {
+    conn = await pool.getConnection();
+
+    const rows = await conn.query(
+      `SELECT
+        COALESCE(h.location, 'sum') AS location,
+        SUM(CASE WHEN f.id IS NOT NULL AND ah.id IS NULL THEN 1 ELSE 0 END) AS GoodCount,
+        SUM(CASE WHEN ah.id IS NOT NULL THEN 1 ELSE 0 END) AS MalCount
+      FROM
+        host h
+      LEFT JOIN
+        flow f ON (h.ip = f.src_ip OR h.ip = f.dst_ip) AND f.timestamp >= NOW() - INTERVAL 1 HOUR
+      LEFT JOIN
+        alert_history ah ON f.id = ah.id
+      GROUP BY
+        h.location WITH ROLLUP;`
+    );
+    console.log(rows);
+    return rows;
+  }
+  catch (err) {
+    console.error('Error in getLocationGoodMalCount', err);
+  }
+  finally {
+    if (conn) conn.release();
+  }
+}
+
 module.exports = {
   getAllFlow,
   getFlowByUUID,
@@ -266,5 +295,6 @@ module.exports = {
   getTopXDayFlow,
   get24HourFlowCount,
   getPerHourAllFlowCount,
-  getGoodMalCount
+  getGoodMalCount,
+  getAllLocationGoodMalCount
 };

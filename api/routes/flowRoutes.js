@@ -390,6 +390,48 @@ router.get('/24Hour/perHourAllFlowCount', flowController.handleGetPerHourAllFlow
  */
 router.get('/goodMalCount', flowController.handleGetGoodMalCount);
 
+/**
+ * @swagger
+ * /flow/location/goodMalCount:
+ *   get:
+ *     summary: 依據區域位置的 location 取得良性與惡性流量的計數
+ *     description: 依據 host 的 location，回傳每一個區域及全部區域的良性與惡性流量的計數。
+ *     tags: [flow]
+ *     responses:
+ *       200:
+ *         description: 成功取得良性與惡性流量的計數。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   location:
+ *                     type: string
+ *                     example: "Taipei"
+ *                   GoodCount:
+ *                     type: integer
+ *                     example: 500
+ *                   MalCount:
+ *                     type: integer
+ *                     example: 10
+ *       404:
+ *         description: Failed to retrieve location good/malicious flow count data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve location good/malicious flow count data
+ */
+router.get('/location/goodMalCount', flowController.handleGetLocationGoodMalCount);
+
 module.exports = router;
 
 /**
