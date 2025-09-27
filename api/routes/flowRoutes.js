@@ -392,14 +392,22 @@ router.get('/goodMalCount', flowController.handleGetGoodMalCount);
 
 /**
  * @swagger
- * /flow/location/goodMalCount:
+ * /flow/locationGraph/{locationName}:
  *   get:
- *     summary: 依據區域位置的 location 取得良性與惡性流量的計數
- *     description: 依據 host 的 location，回傳每一個區域及全部區域的良性與惡性流量的計數。
+ *     summary: 依據區域位置取得每 10 秒的流量數據圖
+ *     description: 依據 host 的 location，回傳該區域及全域的好壞流量計數，以及全域的總流量，時間範圍為最近一小時，每 10 秒一個區間。
  *     tags: [flow]
+ *     parameters:
+ *       - in: path
+ *         name: locationName
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 要查詢的區域位置名稱
+ *         example: "Taipei"
  *     responses:
  *       200:
- *         description: 成功取得良性與惡性流量的計數。
+ *         description: 成功取得流量數據圖。
  *         content:
  *           application/json:
  *             schema:
@@ -407,30 +415,23 @@ router.get('/goodMalCount', flowController.handleGetGoodMalCount);
  *               items:
  *                 type: object
  *                 properties:
- *                   location:
+ *                   interval_start:
  *                     type: string
- *                     example: "Taipei"
- *                   GoodCount:
+ *                     format: date-time
+ *                   location_good:
  *                     type: integer
- *                     example: 500
- *                   MalCount:
+ *                   location_mal:
  *                     type: integer
- *                     example: 10
+ *                   all_good:
+ *                     type: integer
+ *                   all_mal:
+ *                     type: integer
+ *                   all_traffic:
+ *                     type: integer
  *       404:
- *         description: Failed to retrieve location good/malicious flow count data.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 title:
- *                   type: string
- *                   example: 404 Not Found
- *                 message:
- *                   type: string
- *                   example: Failed to retrieve location good/malicious flow count data
+ *         description: Failed to retrieve location graph data.
  */
-router.get('/location/goodMalCount', flowController.handleGetAllLocationGoodMalCount);
+router.get('/locationGraph/:locationName', flowController.handleGetLocationGraph);
 
 module.exports = router;
 
