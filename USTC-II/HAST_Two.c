@@ -47,8 +47,8 @@ void Flow2img_HAST_Two(void *arg) {
     if (reply) freeReplyObject(reply);
     
     // 5. 將該筆 pcap metadata 存到 Redis 的 key 中
-    snprintf(metadata, sizeof(metadata), "{\"s_ip\":\"%s\",\"d_ip\":\"%s\",\"s_port\":\"%d\",\"d_port\":\"%d\"}", 
-             context->s_ip, context->d_ip, context->s_port, context->d_port);
+    snprintf(metadata, sizeof(metadata), "{\"s_ip\":\"%s\",\"d_ip\":\"%s\",\"s_port\":\"%d\",\"d_port\":\"%d\",\"protocol\":\"%d\"}", 
+             context->s_ip, context->d_ip, context->s_port, context->d_port, context->protocol);
     reply = redisCommand(redis_conn, "HSET %s metadata %s", key, metadata);
     if (reply) freeReplyObject(reply);
 
