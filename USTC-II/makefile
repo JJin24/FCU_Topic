@@ -2,7 +2,7 @@ CC=gcc
 # CFLAGS: 編譯器旗標 (警告、最佳化等)
 CFLAGS=-Wall -Wextra -O3
 # LDFLAGS: 連結器旗標 (要連結的函式庫)
-LDFLAGS=-lpcap -lpthread -lhiredis
+LDFLAGS=-lpcap -lpthread -lhiredis -pthread
 
 # 預設目標 'all' 依賴於我們的最終執行檔
 all: Flow2img Flow2img_II Capture_Flow HAST_Two Flow_Capture5
