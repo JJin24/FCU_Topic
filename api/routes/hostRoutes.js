@@ -45,7 +45,7 @@ router.get('/', hostController.handleGetAllHost);
 
 /**
  * @swagger
- * /host/{ip}:
+ * /host/ip/{ip}:
  *   get:
  *     summary: 透過 IP 取得特定主機資訊
  *     description: 根據提供的 IP 位址，回傳單一主機的詳細資訊。
@@ -80,7 +80,7 @@ router.get('/', hostController.handleGetAllHost);
  *                   type: string
  *                   example: Failed to retrieve host data
  */
-router.get('/:ip', hostController.handleGetHostByIP);
+router.get('/ip/:ip', hostController.handleGetHostByIP);
 
 /**
  * @swagger
@@ -125,6 +125,39 @@ router.get('/:ip', hostController.handleGetHostByIP);
  */
 router.get('/name/:ip', hostController.handleGetHostNameByIP);
 
+
+/**
+ * @swagger
+ * /host/status:
+ *   get:
+ *     summary: 取得所有區域裝置數量
+ *     description: 每個區域的正常/異常裝置數量。
+ *     tags: [host]
+ *     responses:
+ *       200:
+ *         description: 成功取得各區域裝置狀態統計。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/HostStatus'
+ *       404:
+ *         description: Failed to retrieve host status data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve host status data
+ */
+router.get('/status', hostController.handleGetHostStatus);
+
 module.exports = router;
 
 /**
@@ -155,4 +188,19 @@ module.exports = router;
  *         status:
  *           type: boolean
  *           example: true
+ *     HostStatus:
+ *       type: object
+ *       properties:
+ *         location:
+ *           type: string
+ *           example: "人言大樓"
+ *         nornal:
+ *           type: string
+ *           example: "0"
+ *         warn:
+ *           type: string
+ *           example: "0"
+ *         alert:
+ *           type: string
+ *           example: "0"
  */

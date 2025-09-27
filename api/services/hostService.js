@@ -1,3 +1,4 @@
+const { get } = require('../routes/hostRoutes');
 const pool = require('./database');
 
 async function getAllHost() {
@@ -59,8 +60,33 @@ async function getHostNameByIP(ip) {
   }
 };
 
+async function getHostStatus() {
+  console.log("!!!!!!!!!! EXECUTING getHostStatus in hostService.js !!!!!!!!!!");
+  var conn;
+  try{
+    conn = await pool.getConnection();
+
+    const hostStatus = await conn.query(
+      "SELECT location, \
+      SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS nornal, \
+      SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS warn, \
+      SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS alert \
+      FROM host GROUP BY location;"
+    )
+    console.log(hostStatus);
+    return hostStatus;
+  }
+  catch(err){
+    console.error('Error in getHostStatus', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+};
+
 module.exports = {
   getAllHost,
   getHostByIP,
-  getHostNameByIP
+  getHostNameByIP,
+  getHostStatus
 };

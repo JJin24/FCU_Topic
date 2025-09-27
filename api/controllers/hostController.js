@@ -14,7 +14,7 @@ const handleGetAllHost = async (req, res) => {
 
 const handleGetHostByIP = async (req, res) => {
   const { ip } = req.params;
-  console.log("Find ip: ", + ip, "'s host info.");
+  console.log("Find ip: ", ip, "'s host info.");
   const host = await hostService.getHostByIP(ip);
 
   if (host) {
@@ -27,7 +27,7 @@ const handleGetHostByIP = async (req, res) => {
 
 const handleGetHostNameByIP = async (req, res) => {
   const { ip } = req.params;
-  console.log("Find ip: ", + ip, "'s host name.");
+  console.log("Find ip: ", ip, "'s host name.");
   const hostName = await hostService.getHostNameByIP(ip);
 
   if (hostName) {
@@ -38,8 +38,21 @@ const handleGetHostNameByIP = async (req, res) => {
   }
 };
 
+const handleGetHostStatus = async (req, res) => {
+  console.log("Get host status");
+  const host = await hostService.getHostStatus();
+
+  if (host) {
+    res.json(host);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve host status data' });
+  }
+};
+
 module.exports = {
   handleGetAllHost,
   handleGetHostByIP,
-  handleGetHostNameByIP
+  handleGetHostNameByIP,
+  handleGetHostStatus
 };
