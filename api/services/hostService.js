@@ -1,4 +1,3 @@
-const { get } = require('../routes/hostRoutes');
 const pool = require('./database');
 
 async function getAllHost() {
