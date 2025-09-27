@@ -56,6 +56,7 @@ typedef struct {
     char d_ip[INET_ADDRSTRLEN];
     int s_port;
     int d_port;
+    uint8_t protocol;
     char timestamp[64];
 } Flow2img_II_context;
 
