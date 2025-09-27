@@ -14,17 +14,22 @@
 #include <sys/un.h>
 #include <errno.h>
 
+#include "common.h"
+
 #define MAX_FLOWS 1024
-#define PRE_SAVE_PACKET_COUNT 6 // n: 預設儲存前6個封包
 #define TRAFFIC_MONITOR_INTERVAL 10 // T: 預設10秒監測流量
 #define FLOW_TIMEOUT_SECONDS 60 // Flow 超時時間
-#define SOCKET_PATH "/tmp/Flow2img_II_Proxy.sock"
+
 
 // --- 從 common.h 引入的結構定義 ---
-#define MAX_PKT_LEN 1518 // 典型乙太網路 MTU
-#define N_PKTS 100       // 假設一個 Flow 最多包含 100 個封包來定義緩衝區大小
 #define MAX_PCAP_DATA_SIZE (MAX_PKT_LEN * N_PKTS)
 
+// 測試控制元
+int enable_save_files_global = 1 ; // 預設啟用儲存檔案，因為需要讀取檔案內容
+int select_interface = 1; 
+int promisc_mode = 1;  //混淆模式，預設開啟
+
+/*
 typedef struct {
     uint8_t pcap_data[MAX_PCAP_DATA_SIZE];
     uint32_t pcap_size;
@@ -36,10 +41,9 @@ typedef struct {
     uint8_t protocol;
 } Flow2img_II_context;
 // --- 結束引入 ---
-
+*/
 // Flow 的資料結構
 typedef struct {
-    // --- 修正 3: 縮小大小以避免格式截斷警告 ---
     char name[240]; 
     pcap_dumper_t *pcap_dumper_full;
     pcap_dumper_t *pcap_dumper_pre;
@@ -65,8 +69,6 @@ pthread_mutex_t flows_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t traffic_mutex = PTHREAD_MUTEX_INITIALIZER;
 unsigned long long total_bytes_sniffed = 0;
 
-int enable_save_files_global = 1; // 預設啟用儲存檔案，因為需要讀取檔案內容
-int select_interface = 1;
 
 // 將數據轉換為大端序 (網路位元組序)
 uint16_t htons_wrapper(uint16_t hostshort) {
@@ -147,7 +149,7 @@ void cleanup_flow_and_send(Flow *flow, const char *src_ip, const char *dst_ip, u
         Flow2img_II_context context_data;
         memset(&context_data, 0, sizeof(Flow2img_II_context));
 
-        // --- 修正 4: 使用 snprintf 替代 strncpy 以確保安全 ---
+        // 使用 snprintf 替代 strncpy 以確保安全 ---
         snprintf(context_data.s_ip, sizeof(context_data.s_ip), "%s", src_ip);
         snprintf(context_data.d_ip, sizeof(context_data.d_ip), "%s", dst_ip);
         context_data.s_port = src_port;
@@ -191,7 +193,7 @@ void *process_packet(void *args) {
     pthread_mutex_unlock(&flows_mutex);
 
     if (flow->save_files) {
-        if (flow->packet_count < PRE_SAVE_PACKET_COUNT) {
+        if (flow->packet_count < N_PKTS) {
             if (flow->pcap_dumper_pre == NULL) {
                 char pre_filename[256];
                 snprintf(pre_filename, sizeof(pre_filename), "%s_pre.pcap", flow->name);
@@ -221,7 +223,6 @@ void *process_packet(void *args) {
 
 // 封包處理的回呼函式
 void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u_char *packet) {
-    // --- 修正 1: 消除未使用參數的警告 ---
     (void)user_data;
 
     pthread_mutex_lock(&traffic_mutex);
@@ -340,7 +341,6 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
 
 // 流量監測執行緒
 void *traffic_monitor_thread(void *arg) {
-    // --- 修正 1: 消除未使用參數的警告 ---
     (void)arg;
 
     unsigned long long prev_total_bytes = 0;
@@ -351,8 +351,13 @@ void *traffic_monitor_thread(void *arg) {
         pthread_mutex_unlock(&traffic_mutex);
 
         unsigned long long bytes_in_interval = current_total_bytes - prev_total_bytes;
+        /*
         double traffic_mbps = (double)bytes_in_interval * 8 / (TRAFFIC_MONITOR_INTERVAL * 1000 * 1000);
         printf("Traffic in last %d seconds: %.2f Mbps\n", TRAFFIC_MONITOR_INTERVAL, traffic_mbps);
+        */
+
+        double traffic_mbps = (double)bytes_in_interval * 8 / (1000 * 1000);
+        printf("Traffic in last %d seconds: %.2f MB\n", TRAFFIC_MONITOR_INTERVAL, traffic_mbps);
         prev_total_bytes = current_total_bytes;
     }
     return NULL;
@@ -360,7 +365,6 @@ void *traffic_monitor_thread(void *arg) {
 
 // Flow 超時檢查執行緒
 void *flow_timeout_checker_thread(void *arg) {
-    // --- 修正 1: 消除未使用參數的警告 ---
     (void)arg;
 
     while (1) {
@@ -440,15 +444,18 @@ int main() {
 
         for (dev = alldevs, i = 0; i < dev_num - 1; dev = dev->next, i++);
 
-        printf("Enable promiscuous mode? (1 for yes, 0 for no): ");
-        int promisc_mode;
 
-        // 同樣檢查 scanf 的回傳值
-        if (scanf("%d", &promisc_mode) != 1) {
-            fprintf(stderr, "Invalid input. Please enter a number.\n");
-            pcap_freealldevs(alldevs);
-            return 1;
-        }
+        if (promisc_mode == 0){
+           printf("Enable promiscuous mode? (1 for yes, 0 for no): ");
+        
+
+            // 同樣檢查 scanf 的回傳值
+            if (scanf("%d", &promisc_mode) != 1) {
+                fprintf(stderr, "Invalid input. Please enter a number.\n");
+                pcap_freealldevs(alldevs);
+                return 1;
+            }
+    }
 
         handle = pcap_open_live(dev->name, BUFSIZ, promisc_mode, 1000, errbuf);
         if (handle == NULL) {
