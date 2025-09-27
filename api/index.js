@@ -31,6 +31,7 @@ const labelListRouter = require('./routes/labelListRoutes');
 const protocolListRouter = require('./routes/protocolListRoutes');
 const dayRouter = require('./routes/dayRoutes');
 const notifyRouter = require('./routes/notifyRoutes');
+const trafficRouter = require('./routes/trafficRoutes');
 
 
 // 只要是 /flow 開頭的路由都交給 flowRouter 處理
@@ -42,6 +43,7 @@ index.use('/labelList', labelListRouter);
 index.use('/protocolList', protocolListRouter);
 index.use('/day', dayRouter);
 index.use('/notify', notifyRouter);
+index.use('/traffic', trafficRouter);
 
 index.get('/', (req, res) => {
   res.send('The server is running');
