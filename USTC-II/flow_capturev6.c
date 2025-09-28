@@ -18,28 +18,27 @@
 
 #define MAX_FLOWS 1024
 #define TRAFFIC_MONITOR_INTERVAL 10 // T: 預設10秒監測流量
-#define FLOW_TIMEOUT_SECONDS 60 // Flow 超時時間
+#define FLOW_TIMEOUT_SECONDS 30 // Flow 超時時間
 
 
 // --- 從 common.h 引入的結構定義 ---
 #define MAX_PCAP_DATA_SIZE (MAX_PKT_LEN * N_PKTS)
 
 // 測試控制元
-int enable_save_files_global = 1 ; // 預設啟用儲存檔案，因為需要讀取檔案內容
-int select_interface = 1; 
+int select_interface = 1;
 int promisc_mode = 1;  //混淆模式，預設開啟
 int del_pcap = 0 ;
 
 // Flow 的資料結構
 typedef struct {
-    char name[240]; 
+    char name[240];
     pcap_dumper_t *pcap_dumper_pre;
     int packet_count;
     pthread_t thread_id;
-    int save_files;
     time_t first_packet_time;
     time_t last_packet_time;
     int is_active;
+    int pcap_sent; // pcap 檔案是否已傳送
     pcap_t *pcap_dead_handle;
 } Flow;
 
@@ -82,7 +81,7 @@ void send_flow_to_socket(const Flow2img_II_context *flow_context) {
     len = strlen(remote.sun_path) + sizeof(remote.sun_family);
 
     if (connect(sockfd, (struct sockaddr *)&remote, len) == -1) {
-        // perror("connect"); 
+        // perror("connect");
         close(sockfd);
         return;
     }
@@ -107,29 +106,27 @@ void send_flow_to_socket(const Flow2img_II_context *flow_context) {
         close(sockfd);
         return;
     }
-    
+
     printf("Successfully sent flow context for %s:%d -> %s:%d\n", context_be.s_ip, ntohs(context_be.s_port), context_be.d_ip, ntohs(context_be.d_port));
     close(sockfd);
 }
 
-// 清理單個 Flow 的資源，讀取 pcap 檔案內容並傳送給 Socket
-void cleanup_flow_and_send(Flow *flow, const char *src_ip, const char *dst_ip, uint16_t src_port, uint16_t dst_port, uint8_t protocol) {
-    if (flow->save_files) {
+// *** 修改 ***: 函式更名並調整職責，僅處理 pcap 檔案的傳送與刪除
+void send_and_delete_pcap(Flow *flow, const char *src_ip, const char *dst_ip, uint16_t src_port, uint16_t dst_port, uint8_t protocol) {
         char pre_filename[256];
         snprintf(pre_filename, sizeof(pre_filename), "%s_pre.pcap", flow->name);
+        
+        // 關閉 dumper 以確保檔案內容寫入完畢
         if (flow->pcap_dumper_pre != NULL) {
             pcap_dump_close(flow->pcap_dumper_pre);
             flow->pcap_dumper_pre = NULL;
         }
-        if (flow->pcap_dead_handle != NULL) {
-            pcap_close(flow->pcap_dead_handle);
-            flow->pcap_dead_handle = NULL;
-        }
+
+        // 這裡不再關閉 pcap_dead_handle，因為 Flow 還要繼續存在
 
         Flow2img_II_context context_data;
         memset(&context_data, 0, sizeof(Flow2img_II_context));
 
-        // 使用 snprintf 替代 strncpy 以確保安全 ---
         snprintf(context_data.s_ip, sizeof(context_data.s_ip), "%s", src_ip);
         snprintf(context_data.d_ip, sizeof(context_data.d_ip), "%s", dst_ip);
         context_data.s_port = src_port;
@@ -152,7 +149,6 @@ void cleanup_flow_and_send(Flow *flow, const char *src_ip, const char *dst_ip, u
             fclose(pcap_file);
         }
         remove(pre_filename);
-    }
 }
 
 // 子執行緒的處理函式
@@ -163,44 +159,53 @@ void *process_packet(void *args) {
     const u_char *packet = thread_args->packet;
     pcap_t *pcap_handle_for_dumper = thread_args->pcap_handle_for_dumper;
 
+    int should_send = 0;
+
     pthread_mutex_lock(&flows_mutex);
     flow->last_packet_time = time(NULL);
     flow->is_active = 1;
-    pthread_mutex_unlock(&flows_mutex);
 
-    if (flow->save_files) {
-        if (flow->packet_count < N_PKTS) {
-            if (flow->pcap_dumper_pre == NULL) {
-                char pre_filename[256];
-                snprintf(pre_filename, sizeof(pre_filename), "%s_pre.pcap", flow->name);
-                flow->pcap_dumper_pre = pcap_dump_open(pcap_handle_for_dumper, pre_filename);
-            }
-            if (flow->pcap_dumper_pre != NULL) {
-                pcap_dump((u_char *)flow->pcap_dumper_pre, header, packet);
-                pcap_dump_flush(flow->pcap_dumper_pre);
-            }
+    // *** 修改 ***: 只有在 packet_count < N_PKTS 時才寫入檔案
+    if (flow->packet_count < N_PKTS) {
+        if (flow->pcap_dumper_pre == NULL) {
+            char pre_filename[256];
+            snprintf(pre_filename, sizeof(pre_filename), "%s_pre.pcap", flow->name);
+            flow->pcap_dumper_pre = pcap_dump_open(pcap_handle_for_dumper, pre_filename);
+        }
+        if (flow->pcap_dumper_pre != NULL) {
+            pcap_dump((u_char *)flow->pcap_dumper_pre, header, packet);
+            pcap_dump_flush(flow->pcap_dumper_pre);
         }
     }
-
-    flow->packet_count++;
     
-    // --- 檢查是否達到 N_PKTS ---
-    if (flow->packet_count == N_PKTS) {
+    flow->packet_count++;
+
+    // *** 修改 ***: 檢查是否剛好達到 N_PKTS 且尚未傳送過
+    if (flow->packet_count == N_PKTS && !flow->pcap_sent) {
+        should_send = 1;
+        flow->pcap_sent = 1; // 標記為已傳送，防止其他執行緒重複操作
+    }
+    pthread_mutex_unlock(&flows_mutex);
+
+    // 如果達到 N_PKTS，則呼叫函式傳送檔案
+    if (should_send) {
         char src_ip_str[INET_ADDRSTRLEN];
         char dst_ip_str[INET_ADDRSTRLEN];
         uint16_t src_p = 0;
         uint16_t dst_p = 0;
         uint8_t proto = 0;
-        sscanf(flow->name, "%[^_]_%hu-%[^_]_%hu_%hhu", 
+        sscanf(flow->name, "%[^_]_%hu-%[^_]_%hu_%hhu",
                src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
 
-        // 呼叫清理函式，此函式包含讀檔、傳送 Socket 等 I/O 操作，因此不在 Mutex 鎖內執行
-        cleanup_flow_and_send(flow, src_ip_str, dst_ip_str, src_p, dst_p, proto);
+        // 呼叫新的函式，只傳送檔案，不清理 Flow
+        send_and_delete_pcap(flow, src_ip_str, dst_ip_str, src_p, dst_p, proto);
+        // 此處不再修改 is_active 或釋放 flow，讓它繼續存在
     }
 
     free(thread_args);
     return NULL;
 }
+
 
 // 封包處理的回呼函式
 void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u_char *packet) {
@@ -287,10 +292,10 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
             
             flows[flow_index]->pcap_dumper_pre = NULL;
             flows[flow_index]->packet_count = 0;
-            flows[flow_index]->save_files = enable_save_files_global;
             flows[flow_index]->first_packet_time = current_time;
             flows[flow_index]->last_packet_time = current_time;
             flows[flow_index]->is_active = 1;
+            flows[flow_index]->pcap_sent = 0; // *** 新增 ***: 初始化旗標
             flows[flow_index]->pcap_dead_handle = pcap_open_dead(DLT_EN10MB, 65535);
             if (flows[flow_index]->pcap_dead_handle == NULL) {
                  fprintf(stderr, "Failed to open dead handle for flow %s\n", flows[flow_index]->name);
@@ -331,11 +336,7 @@ void *traffic_monitor_thread(void *arg) {
         pthread_mutex_unlock(&traffic_mutex);
 
         unsigned long long bytes_in_interval = current_total_bytes - prev_total_bytes;
-        /*
-        double traffic_mbps = (double)bytes_in_interval * 8 / (TRAFFIC_MONITOR_INTERVAL * 1000 * 1000);
-        printf("Traffic in last %d seconds: %.2f Mbps\n", TRAFFIC_MONITOR_INTERVAL, traffic_mbps);
-        */
-
+        
         double traffic_mbps = (double)bytes_in_interval * 8 / (1000 * 1000);
         printf("Traffic in last %d seconds: %.2f MB\n", TRAFFIC_MONITOR_INTERVAL, traffic_mbps);
         prev_total_bytes = current_total_bytes;
@@ -357,17 +358,25 @@ void *flow_timeout_checker_thread(void *arg) {
                 if (current_time - flows[i]->last_packet_time > FLOW_TIMEOUT_SECONDS) {
                     printf("Flow %s timed out. Cleaning up.\n", flows[i]->name);
                     
-                    char src_ip_str[INET_ADDRSTRLEN];
-                    char dst_ip_str[INET_ADDRSTRLEN];
-                    uint16_t src_p = 0;
-                    uint16_t dst_p = 0;
-                    uint8_t proto = 0;
-                    
-                    sscanf(flows[i]->name, "%[^_]_%hu-%[^_]_%hu_%hhu", 
-                           src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
+                    // *** 修改 ***: 只有在 pcap 尚未傳送時才進行傳送
+                    if (!flows[i]->pcap_sent) {
+                        char src_ip_str[INET_ADDRSTRLEN];
+                        char dst_ip_str[INET_ADDRSTRLEN];
+                        uint16_t src_p = 0;
+                        uint16_t dst_p = 0;
+                        uint8_t proto = 0;
+                        
+                        sscanf(flows[i]->name, "%[^_]_%hu-%[^_]_%hu_%hhu", 
+                               src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
 
-                    flows[i]->is_active = 0; 
-                    cleanup_flow_and_send(flows[i], src_ip_str, dst_ip_str, src_p, dst_p, proto);
+                        // 超時前未達到 N_PKTS，傳送現有的封包
+                        send_and_delete_pcap(flows[i], src_ip_str, dst_ip_str, src_p, dst_p, proto);
+                    }
+
+                    // *** 修改 ***: 執行最終的清理
+                    if (flows[i]->pcap_dead_handle != NULL) {
+                        pcap_close(flows[i]->pcap_dead_handle);
+                    }
                     free(flows[i]);
                     flows[i] = NULL;
                 }
@@ -408,7 +417,6 @@ int main() {
         printf("Enter the interface number (1-%d): ", i);
         int dev_num;
         
-        // 檢查 scanf 的回傳值，確保成功讀取一個整數
         if (scanf("%d", &dev_num) != 1) {
             fprintf(stderr, "Invalid input. Please enter a number.\n");
             pcap_freealldevs(alldevs);
@@ -427,8 +435,6 @@ int main() {
         if (promisc_mode == 0){
            printf("Enable promiscuous mode? (1 for yes, 0 for no): ");
         
-
-            // 同樣檢查 scanf 的回傳值
             if (scanf("%d", &promisc_mode) != 1) {
                 fprintf(stderr, "Invalid input. Please enter a number.\n");
                 pcap_freealldevs(alldevs);
@@ -451,19 +457,23 @@ int main() {
         pcap_freealldevs(alldevs);
     }
     
-    //程式結束前，把記憶體中尚未處理完的 flow 資料清理掉。
     for (int j = 0; j < MAX_FLOWS; j++) {
         if (flows[j] != NULL) {
-            char src_ip_str[INET_ADDRSTRLEN];
-            char dst_ip_str[INET_ADDRSTRLEN];
-            uint16_t src_p = 0;
-            uint16_t dst_p = 0;
-            uint8_t proto = 0;
+            if (!flows[j]->pcap_sent) {
+                 char src_ip_str[INET_ADDRSTRLEN];
+                 char dst_ip_str[INET_ADDRSTRLEN];
+                 uint16_t src_p = 0;
+                 uint16_t dst_p = 0;
+                 uint8_t proto = 0;
             
-            sscanf(flows[j]->name, "%[^_]_%hu-%[^_]_%hu_%hhu", 
-                   src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
+                 sscanf(flows[j]->name, "%[^_]_%hu-%[^_]_%hu_%hhu", 
+                        src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
 
-            cleanup_flow_and_send(flows[j], src_ip_str, dst_ip_str, src_p, dst_p, proto);
+                 send_and_delete_pcap(flows[j], src_ip_str, dst_ip_str, src_p, dst_p, proto);
+            }
+            if (flows[j]->pcap_dead_handle != NULL) {
+                 pcap_close(flows[j]->pcap_dead_handle);
+            }
             free(flows[j]);
             flows[j] = NULL;
         }
