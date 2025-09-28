@@ -1,6 +1,6 @@
 # USTC-II 相關程式內容
 
-目前使用 `make` 指令將會編譯出 4 個程式，分別是 Flow2img、Flow2img_II、Capture_Flow、Flow2img_II。相關程式碼的功能及用途如下。
+目前使用 `make` 指令將會編譯出 5 個程式，分別是 Flow2img、Flow2img_II、Capture_Flow、Flow2img_II、Flow_Capture_v6。相關程式碼的功能及用途如下。
 
 ## 使用的第三方套件與授權
 
@@ -18,11 +18,47 @@
 apt install libpcap-dev redis-server redis-tools libhiredis-dev libevent-dev
 ```
 
-2. 在此資料夾中使用 `make` 指令將會自動編譯此上述的 4 個程式。
+2. 在此資料夾中使用 `make` 指令將會自動編譯此上述的 5 個程式。
 
 ```bash
 make
 ```
+
+## [Flow_Capture_v6](flow_capturev6.c)
+
+### 功能
+- 監聽網卡封包，並收集 "common.h" 中指定的 `N_PKTS` 個 `M_BYTES`大小的封包
+- 統計 `TRAFFIC_MONITOR_INTERVAL` 秒間的流量大小
+- 可監測 Flow 是否 Timeout
+- 可監看 pcap 檔的傳輸狀況
+- 自動刪除已傳送的 pcap 檔案
+- 僅供 IPv4 服務
+
+### 說明
+程式採用「每封包一執行緒」的模式來非同步處理封包的寫入與計數。
+
+引用函數庫 "common.h"，方便整體系統調整
+
+可控制的控制元
+- `promisc_mode` :混淆模式控制元，預設開啟
+- `MAX_FLOWS` :同時存在Flow的最大數
+- `TRAFFIC_MONITOR_INTERVAL` :統計幾秒內的流量大小
+- `FLOW_TIMEOUT_SECONDS` :定義Timeout的時間
+
+- 主程式先建立2個 pthread : `traffic_monitor_thread` 、 `flow_timeout_checker_thread`; 在進入`pcap_loop`去讀取網卡並透過`packet_handler`處理封包
+- `traffic_monitor_thread` 利用總流量及上次統計的流量去得到最近 `TRAFFIC_MONITOR_INTERVAL` 秒內的流量大小，並顯示出來
+- `flow_timeout_checker_thread` 會檢查`現在時間-Flow最後收包時間`是否大於`FLOW_TIMEOUT_SECONDS`，若 Timeout ，則將 Flow 資料及 pcap 檔傳送至指定的 Socket 
+- `packet_handler` 每收到一個封包，就會為該封包建立一個新的 detached 執行緒來處理，使各個執行緒互不影響。透過 `header->len` 統計蒐集的「總流量大小」，以便 `traffic_monitor_thread` 計算。在此分析五元組，並將Flow的五元組加時間戳作為Flow的名字，檢查該Flow是否存在過，若無則建立 Flow 結構並初始化
+
+### 使用方法
+可至 flow_capturev6.c 更改 `promisc_mode` 即根據需求調整 `MAX_FLOW`、`TRAFFIC_MONITOR_INTERVAL`、`FLOW_TIMEOUT_SECONDS`再重新編譯
+
+- 使用時須提高權限
+```base
+sudo ./Flow_Capture_v6
+```
+- 根據顯示的網卡做選擇(輸入數字)
+`dev_num` :根據提示，手動輸入要監聽的網卡編號
 
 ## [Flow2img](./Flow2img.c)
 

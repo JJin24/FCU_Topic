@@ -13,21 +13,16 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <errno.h>
-
 #include "common.h"
 
 #define MAX_FLOWS 1024
 #define TRAFFIC_MONITOR_INTERVAL 10 // T: 預設10秒監測流量
 #define FLOW_TIMEOUT_SECONDS 30 // Flow 超時時間
-
-
 // --- 從 common.h 引入的結構定義 ---
 #define MAX_PCAP_DATA_SIZE (MAX_PKT_LEN * N_PKTS)
 
 // 測試控制元
-int select_interface = 1;
 int promisc_mode = 1;  //混淆模式，預設開啟
-int del_pcap = 0 ;
 
 // Flow 的資料結構
 typedef struct {
@@ -269,7 +264,7 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
             break;
         }
     }
-
+    // flow[i]->name 皆未匹配到
     if (flow_index == -1) {
         for (int i = 0; i < MAX_FLOWS; i++) {
             if (flows[i] == NULL) {
@@ -277,7 +272,7 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
                 break;
             }
         }
-
+        // flow[] 還有位置
         if (flow_index != -1) {
             flows[flow_index] = (Flow *)malloc(sizeof(Flow));
             if (flows[flow_index] == NULL) {
@@ -295,7 +290,7 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
             flows[flow_index]->first_packet_time = current_time;
             flows[flow_index]->last_packet_time = current_time;
             flows[flow_index]->is_active = 1;
-            flows[flow_index]->pcap_sent = 0; // *** 新增 ***: 初始化旗標
+            flows[flow_index]->pcap_sent = 0; 
             flows[flow_index]->pcap_dead_handle = pcap_open_dead(DLT_EN10MB, 65535);
             if (flows[flow_index]->pcap_dead_handle == NULL) {
                  fprintf(stderr, "Failed to open dead handle for flow %s\n", flows[flow_index]->name);
@@ -457,6 +452,7 @@ int main() {
         pcap_freealldevs(alldevs);
     }
     
+    // 程式結束前清空未處理的Flow及pcap
     for (int j = 0; j < MAX_FLOWS; j++) {
         if (flows[j] != NULL) {
             if (!flows[j]->pcap_sent) {
