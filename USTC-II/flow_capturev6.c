@@ -16,6 +16,7 @@
 #include "common.h"
 
 #define MAX_FLOWS 1024
+
 #define TRAFFIC_MONITOR_INTERVAL 10 // T: 預設10秒監測流量
 #define FLOW_TIMEOUT_SECONDS 30 // Flow 超時時間
 // --- 從 common.h 引入的結構定義 ---
@@ -353,7 +354,7 @@ void *flow_timeout_checker_thread(void *arg) {
                 if (current_time - flows[i]->last_packet_time > FLOW_TIMEOUT_SECONDS) {
                     printf("Flow %s timed out. Cleaning up.\n", flows[i]->name);
                     
-                    // *** 修改 ***: 只有在 pcap 尚未傳送時才進行傳送
+                    //只有在 pcap 尚未傳送時才進行傳送
                     if (!flows[i]->pcap_sent) {
                         char src_ip_str[INET_ADDRSTRLEN];
                         char dst_ip_str[INET_ADDRSTRLEN];
@@ -386,12 +387,6 @@ int main() {
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_if_t *alldevs, *dev;
 
-    pthread_t traffic_tid, flow_timeout_tid;
-    pthread_create(&traffic_tid, NULL, traffic_monitor_thread, NULL);
-    pthread_detach(traffic_tid);
-    pthread_create(&flow_timeout_tid, NULL, flow_timeout_checker_thread, NULL);
-    pthread_detach(flow_timeout_tid);
-
     pcap_t *handle = NULL;
         if (pcap_findalldevs(&alldevs, errbuf) == -1) {
             fprintf(stderr, "Error in pcap_findalldevs: %s\n", errbuf);
@@ -417,6 +412,12 @@ int main() {
             pcap_freealldevs(alldevs);
             return 1;
         }
+
+         pthread_t traffic_tid, flow_timeout_tid;
+         pthread_create(&traffic_tid, NULL, traffic_monitor_thread, NULL);
+         pthread_detach(traffic_tid);
+         pthread_create(&flow_timeout_tid, NULL, flow_timeout_checker_thread, NULL);
+         pthread_detach(flow_timeout_tid);
 
         if (dev_num < 1 || dev_num > i) {
             fprintf(stderr, "Invalid interface number.\n");
