@@ -262,41 +262,63 @@ async function getLocationGraph(locationName) {
     conn = await pool.getConnection();
 
     const query = `
-      WITH RECURSIVE TimeSeries AS (
-        SELECT FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR) / 10) * 10) AS interval_start
-        UNION ALL
-        SELECT interval_start + INTERVAL 10 SECOND
-        FROM TimeSeries
-        WHERE interval_start + INTERVAL 10 SECOND < NOW()
-      ),
-      Flows AS (
+    WITH RECURSIVE TimeSeries AS (
         SELECT 
-          f.id, 
-          f.timestamp, 
-          h.location, 
-          (ah.id IS NULL) AS is_good
+            FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR) / 30) * 30) AS interval_start
+        UNION ALL
+        SELECT 
+            interval_start + INTERVAL 30 SECOND
+        FROM TimeSeries
+        WHERE interval_start + INTERVAL 30 SECOND < NOW()
+    ),
+    BucketedFlows AS (
+        -- 2A. 原始流量資料與主機/告警聯接，並計算分桶時間
+        SELECT 
+            -- 計算並產生 30 秒間隔的起始時間戳
+            FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(f.timestamp) / 30) * 30) AS interval_start,
+            h.location, 
+            (ah.id IS NULL) AS is_good
         FROM flow f
         LEFT JOIN alert_history ah ON f.id = ah.id
-        JOIN host h ON (f.src_ip = h.ip OR f.dst_ip = h.ip)
-        WHERE f.timestamp >= NOW() - INTERVAL 1 HOUR
-      ),
-      Traffic AS (
-        SELECT timestamp, traffic
-        FROM traffic_table
-        WHERE timestamp >= NOW() - INTERVAL 1 HOUR
-      )
-      SELECT 
+        JOIN host h ON (f.src_ip = h.ip OR f.dst_ip = h.ip) 
+        WHERE 
+            f.timestamp >= NOW() - INTERVAL 1 HOUR
+    ),
+    AggregatedFlows AS (
+        -- 2B. 聚合流量指標
+        SELECT
+            interval_start,
+            COALESCE(SUM(CASE WHEN bf.location = ? THEN bf.is_good END), 0) AS location_good,
+            COALESCE(SUM(CASE WHEN bf.location = ? AND NOT bf.is_good THEN 1 ELSE 0 END), 0) AS location_mal,
+            COALESCE(SUM(bf.is_good), 0) AS all_good,
+            COALESCE(SUM(CASE WHEN NOT bf.is_good THEN 1 ELSE 0 END), 0) AS all_mal
+        FROM BucketedFlows bf
+        GROUP BY interval_start
+    ),
+    AggregatedTraffic AS (
+        -- 3. 聚合流量資料
+        SELECT 
+            FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(t.timestamp) / 30) * 30) AS interval_start, 
+            COALESCE(SUM(t.traffic), 0) AS all_traffic
+        FROM traffic_table t
+        WHERE 
+            t.timestamp >= NOW() - INTERVAL 1 HOUR
+            -- 核心優化: 對流量資料也應用「前 10 秒」的過濾規則
+            AND (UNIX_TIMESTAMP(t.timestamp) % 30) < 10
+        GROUP BY interval_start
+    )
+    -- 4. 最終結果集：使用精確的 interval_start 進行聯接
+    SELECT 
         DATE_FORMAT(ts.interval_start, '%Y-%m-%dT%H:%i:%sZ') as interval_start,
-        COALESCE(SUM(CASE WHEN f.location = ? THEN f.is_good END), 0) AS location_good,
-        COALESCE(SUM(CASE WHEN f.location = ? AND NOT f.is_good THEN 1 ELSE 0 END), 0) AS location_mal,
-        COALESCE(SUM(f.is_good), 0) AS all_good,
-        COALESCE(SUM(CASE WHEN NOT f.is_good THEN 1 ELSE 0 END), 0) AS all_mal,
-        COALESCE(SUM(t.traffic), 0) AS all_traffic
-      FROM TimeSeries ts
-      LEFT JOIN Flows f ON f.timestamp >= ts.interval_start AND f.timestamp < ts.interval_start + INTERVAL 10 SECOND
-      LEFT JOIN Traffic t ON t.timestamp >= ts.interval_start AND t.timestamp < ts.interval_start + INTERVAL 10 SECOND
-      GROUP BY ts.interval_start
-      ORDER BY ts.interval_start;
+        COALESCE(af.location_good, 0) AS location_good,
+        COALESCE(af.location_mal, 0) AS location_mal,
+        COALESCE(af.all_good, 0) AS all_good,
+        COALESCE(af.all_mal, 0) AS all_mal,
+        COALESCE(at.all_traffic, 0) AS all_traffic
+    FROM TimeSeries ts
+    LEFT JOIN AggregatedFlows af ON ts.interval_start = af.interval_start
+    LEFT JOIN AggregatedTraffic at ON ts.interval_start = at.interval_start
+    ORDER BY ts.interval_start;
     `;
 
     const rows = await conn.query(query, [locationName, locationName]);
