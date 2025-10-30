@@ -158,53 +158,6 @@ router.get('/name/:ip', hostController.handleGetHostNameByIP);
  */
 router.get('/status', hostController.handleGetHostStatus);
 
-module.exports = router;
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     Host:
- *       type: object
- *       properties:
- *         ip:
- *           type: string
- *           format: ipv6
- *           example: "::ffff:192.168.1.100"
- *         name:
- *           type: string
- *           example: "Main-Server"
- *         location:
- *           type: string
- *           example: "Data Center 1"
- *         gateway:
- *           type: string
- *           format: ipv6
- *           example: "::ffff:192.168.1.254"
- *         mac_address:
- *           type: number
- *           format: mac
- *           example: "1657546"
- *         status:
- *           type: boolean
- *           example: true
- *     HostStatus:
- *       type: object
- *       properties:
- *         location:
- *           type: string
- *           example: "人言大樓"
- *         nornal:
- *           type: string
- *           example: "0"
- *         warn:
- *           type: string
- *           example: "0"
- *         alert:
- *           type: string
- *           example: "0"
- */
-
 /**
  * @swagger
  * paths:
@@ -270,6 +223,87 @@ module.exports = router;
  */
 
 router.post('/AddNewDevices', hostController.handlePostNewDevices);
+
+/**
+ * @swagger
+ * /host/building:
+ *   get:
+ *     summary: 取得建築物列表
+ *     description: 取得 host 中已記錄 location 位置。
+ *     tags: [host]
+ *     responses:
+ *       200:
+ *         description: 成功取得取得建築物列表。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 location:
+ *                   type: string
+ *                   example: "資電大樓"
+ *       404:
+ *         description: Failed to retrieve building list data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve building list data
+ */
+router.get('/building', hostController.handleBuildingList);
+
+module.exports = router;
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Host:
+ *       type: object
+ *       properties:
+ *         ip:
+ *           type: string
+ *           format: ipv6
+ *           example: "::ffff:192.168.1.100"
+ *         name:
+ *           type: string
+ *           example: "Main-Server"
+ *         location:
+ *           type: string
+ *           example: "Data Center 1"
+ *         gateway:
+ *           type: string
+ *           format: ipv6
+ *           example: "::ffff:192.168.1.254"
+ *         mac_address:
+ *           type: number
+ *           format: mac
+ *           example: "1657546"
+ *         status:
+ *           type: boolean
+ *           example: true
+ *     HostStatus:
+ *       type: object
+ *       properties:
+ *         location:
+ *           type: string
+ *           example: "人言大樓"
+ *         nornal:
+ *           type: string
+ *           example: "0"
+ *         warn:
+ *           type: string
+ *           example: "0"
+ *         alert:
+ *           type: string
+ *           example: "0"
+ */
 
 /** 
  * components:
