@@ -83,9 +83,35 @@ async function getHostStatus() {
   }
 };
 
+
+async function getBuildingList() {
+  var conn;
+  try{
+    conn = await pool.getConnection();
+
+    const ipHost = await conn.query(`
+      SELECT
+        location
+      FROM
+        host
+      GROUP BY
+        location;`
+    )
+    console.log(ipHost);
+    return ipHost;
+  }
+  catch(err){
+    console.error('Error in getBuildingList', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+};
+
 module.exports = {
   getAllHost,
   getHostByIP,
   getHostNameByIP,
-  getHostStatus
+  getHostStatus,
+  getBuildingList
 };

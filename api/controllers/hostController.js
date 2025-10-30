@@ -50,9 +50,22 @@ const handleGetHostStatus = async (req, res) => {
   }
 };
 
+const handleBuildingList = async (req, res) => {
+  console.log("Get host status");
+  const host = await hostService.getBuildingList();
+
+  if (host) {
+    res.json(host);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve host status data' });
+  }
+};
+
 module.exports = {
   handleGetAllHost,
   handleGetHostByIP,
   handleGetHostNameByIP,
-  handleGetHostStatus
+  handleGetHostStatus,
+  handleBuildingList
 };

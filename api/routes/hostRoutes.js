@@ -158,6 +158,40 @@ router.get('/name/:ip', hostController.handleGetHostNameByIP);
  */
 router.get('/status', hostController.handleGetHostStatus);
 
+/**
+ * @swagger
+ * /host/building:
+ *   get:
+ *     summary: 取得建築物列表
+ *     description: 取得 host 中已記錄 location 位置。
+ *     tags: [host]
+ *     responses:
+ *       200:
+ *         description: 成功取得取得建築物列表。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 location:
+ *                   type: string
+ *                   example: "資電大樓"
+ *       404:
+ *         description: Failed to retrieve building list data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve building list data
+ */
+router.get('/building', hostController.handleBuildingList);
+
 module.exports = router;
 
 /**
