@@ -1,3 +1,4 @@
+const { get } = require('../routes/flowRoutes');
 const pool = require('./database');
 
 async function getAllHost() {
@@ -108,10 +109,36 @@ async function getBuildingList() {
   }
 };
 
+async function getHostNameByBuilding(building) {
+  var conn;
+  try{
+    conn = await pool.getConnection();
+
+    const host = await conn.query(`
+      SELECT
+        location, name AS HostName
+      FROM
+        host
+      where
+        location = ?;`,
+      [building]
+    )
+    console.log(host);
+    return host;
+  }
+  catch(err){
+    console.error('Error in getHostNameByIP', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+};
+
 module.exports = {
   getAllHost,
   getHostByIP,
   getHostNameByIP,
   getHostStatus,
-  getBuildingList
+  getBuildingList,
+  getHostNameByBuilding
 };

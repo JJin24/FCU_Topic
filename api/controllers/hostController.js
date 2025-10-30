@@ -62,10 +62,24 @@ const handleBuildingList = async (req, res) => {
   }
 };
 
+const handleGetHostNameByBuilding = async (req, res) => {
+  const { building } = req.params;
+  console.log("Get host status");
+  const host = await hostService.getHostNameByBuilding(building);
+
+  if (host) {
+    res.json(host);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve host name' });
+  }
+};
+
 module.exports = {
   handleGetAllHost,
   handleGetHostByIP,
   handleGetHostNameByIP,
   handleGetHostStatus,
-  handleBuildingList
+  handleBuildingList,
+  handleGetHostNameByBuilding
 };
