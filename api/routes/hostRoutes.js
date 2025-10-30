@@ -258,6 +258,48 @@ router.post('/AddNewDevices', hostController.handlePostNewDevices);
  */
 router.get('/building', hostController.handleBuildingList);
 
+/**
+ * @swagger
+ * /host/building/{:building}:
+ *   get:
+ *     summary: 取得建築物列表 (API-DOCS 未完成)
+ *     description: 取得 host 中已記錄 location 位置。
+ *     tags: [host]
+ *     parameters:
+ *       - in: path
+ *         name: building
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 要查詢的建築物名稱
+ *         example: "資電大樓"
+ *     responses:
+ *       200:
+ *         description: 成功取得取得建築物列表。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 HostName:
+ *                   type: string
+ *                   example: "Server1"
+ *       404:
+ *         description: Failed to retrieve building list data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve building list data
+ */
+router.get('/building/:building', hostController.handleGetHostNameByBuilding);
+
 module.exports = router;
 
 /**
