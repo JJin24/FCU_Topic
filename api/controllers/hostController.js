@@ -112,16 +112,39 @@ const handleGetHostNameByBuilding = async (req, res) => {
   }
 };
 
+const handleGetSearchHistory = async (req, res) => {
+  const { start_time, end_time, label, building, host } = req.body;
+
+  if (!start_time || !end_time || !building || !Array.isArray(host) || !Array.isArray(label)) {
+    return res.status(400).json({ error: 'post data error' });
+  }
+  console.log("Get search history with filters:", req.body);
+
+  const alert_label_ids = label
+    .filter(id => id !== 'Good' && !isNaN(Number(id)))
+    .map(id => Number(id));
+
+  const final_alert_ids = alert_label_ids.length > 0 ? alert_label_ids : [null];
+
+  const is_good_requested = label.includes('Good') ? 1 : 0;
+
+  const result = await hostService.getSearchHistory(building, host, start_time, end_time, final_alert_ids, is_good_requested);
+
+  if (result) {
+    res.json(result);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve search history data' });
+  }
+};
+
 module.exports = {
   handleGetAllHost,
   handleGetHostByIP,
   handleGetHostNameByIP,
   handleGetHostStatus,
-<<<<<<< HEAD
   handlePostNewDevices,
-  handleBuildingList
-=======
   handleBuildingList,
-  handleGetHostNameByBuilding
->>>>>>> f84d8da (Feat: getHostNameByBuilding())
+  handleGetHostNameByBuilding,
+  handleGetSearchHistory
 };
