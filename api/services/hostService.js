@@ -191,7 +191,7 @@ async function getSearchHistory(building, host_names, start_time, end_time, fina
           f.timestamp BETWEEN ? AND ? -- [3] start_time, [4] end_time
       )
 
-      -- --- 3. 壞流量 (Alerts) 查詢 (已修正別名和語法錯誤) ---
+      -- --- 3. 壞流量 (Alerts) 查詢 ---
       SELECT
         th.host_name,
         th.location,
@@ -199,7 +199,7 @@ async function getSearchHistory(building, host_names, start_time, end_time, fina
         ff.src_ip,
         ff.dst_ip,
         pl.name AS protocol_name,
-        ll.name AS label_name,
+        ll.name AS label, -- 修正: 將 ll.name 的別名設為 label
         -- 將 status 欄位轉換為中文描述
         CASE ah.status
           WHEN 0 THEN '尚未處理'
@@ -213,7 +213,7 @@ async function getSearchHistory(building, host_names, start_time, end_time, fina
       INNER JOIN label_list ll ON ah.label = ll.label_id
       INNER JOIN TargetHosts th ON ff.src_ip = th.ip OR ff.dst_ip = th.ip
       WHERE
-        ah.label IN (?) -- [5] alert_label_ids 陣列 (若為空，將替換為 [null])
+        ll.name IN (?)
 
       UNION ALL
 
@@ -225,7 +225,7 @@ async function getSearchHistory(building, host_names, start_time, end_time, fina
         ff.src_ip,
         ff.dst_ip,
         pl.name AS protocol_name,
-        'Good' AS label_name,
+        'Good' AS label,
         '正常' AS status,
         '-' AS score -- Good 流量無分數
       FROM FilteredFlows ff
@@ -236,7 +236,7 @@ async function getSearchHistory(building, host_names, start_time, end_time, fina
         ah.id IS NULL           -- 確保該流量沒有在 alert_history 中
         AND ? = 1               -- [6] is_good_requested (僅在請求 Good 流量時啟用)
       ;
-      `, [building, host_names, start_time, end_time, final_alert_ids, is_good_requested]
+   `, [building, host_names, start_time, end_time, final_alert_ids, is_good_requested]
     );
     console.log(result);
     return result;

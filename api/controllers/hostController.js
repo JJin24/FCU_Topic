@@ -120,15 +120,12 @@ const handleGetSearchHistory = async (req, res) => {
   }
   console.log("Get search history with filters:", req.body);
 
-  const alert_label_ids = label
-    .filter(id => id !== 'Good' && !isNaN(Number(id)))
-    .map(id => Number(id));
-
-  const final_alert_ids = alert_label_ids.length > 0 ? alert_label_ids : [null];
+  const final_alert_names = label
+    .filter(name => name !== 'Good');
 
   const is_good_requested = label.includes('Good') ? 1 : 0;
-
-  const result = await hostService.getSearchHistory(building, host, start_time, end_time, final_alert_ids, is_good_requested);
+  
+  const result = await hostService.getSearchHistory(building, host, start_time, end_time, final_alert_names, is_good_requested);
 
   if (result) {
     res.json(result);
