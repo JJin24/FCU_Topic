@@ -260,7 +260,7 @@ async function getLocationGraph(locationName) {
   var conn;
   try {
     conn = await pool.getConnection();
-
+    console.log("Get Location Graph API");
     const query = `
     WITH RECURSIVE TimeSeries AS (
         SELECT 
@@ -322,6 +322,7 @@ async function getLocationGraph(locationName) {
     `;
 
     const rows = await conn.query(query, [locationName, locationName]);
+    console.log(rows);
     return rows;
   } catch (err) {
     console.error('Error in getLocationGraph', err);

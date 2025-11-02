@@ -109,6 +109,8 @@ const handleGetGoodMalCount = async (req, res) => {
 
 const handleGetLocationGraph = async (req, res) => {
   const { locationName } = req.params;
+
+  console.log("Now Get ", locationName, " Location Graph");
   const result = await flowService.getLocationGraph(locationName);
 
   if (result) {
