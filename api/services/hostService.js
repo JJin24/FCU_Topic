@@ -83,9 +83,40 @@ async function getHostStatus() {
   }
 };
 
+async function postNewDevice(deviceData) {
+  var conn;
+  try {
+    conn = await pool.getConnection();
+
+    const result = await conn.query(
+      "INSERT INTO host (name, location, ip, gateway, mac_addr, status, department) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [
+        deviceData.name,
+        deviceData.location,
+        deviceData.ip,
+        deviceData.gateway,
+        deviceData.mac_addr,
+        deviceData.status,
+        deviceData.department,
+      ]
+    );
+    console.log("New device added:", result);
+    return result.insertId;
+  }
+  catch (err) {
+    console.error('Error in postNewDevice', err);
+    throw err;
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+};
+
+
 module.exports = {
   getAllHost,
   getHostByIP,
   getHostNameByIP,
-  getHostStatus
+  getHostStatus,
+  postNewDevice
 };

@@ -204,3 +204,119 @@ module.exports = router;
  *           type: string
  *           example: "0"
  */
+
+/**
+ * @swagger
+ * paths:
+ *  /host/AddNewDevices:
+ *    post:
+ *      summary: 新增單筆主機裝置資訊
+ *      description: 接收手機 App 傳入的裝置詳細資訊（名稱、位置、IP、MAC等），並寫入 MariaDB 的 host 資料表。
+ *      tags: [host]
+ * 
+ *      requestBody:
+ *        required: true
+ *        content:
+ *          application/json:
+ *            schema:
+ *              # 引用或定義一個 Host Schema，定義了 POST 請求必須包含的欄位
+ *              $ref: '#/components/schemas/HostInput'
+ *      responses:
+ * 
+ *        201:
+ *          description: 成功新增主機資訊
+ *          content:
+ *            application/json:
+ *              schema:
+ *                type: object
+ *                properties:
+ *                  title:
+ *                    type: string
+ *                    example: Success
+ *                  message:
+ *                    type: string
+ *                    example: Device information saved successfully.
+ *                  device_id: # 假設資料庫新增後會回傳新 ID
+ *                    type: integer
+ *                    example: 1024
+ * 
+ *        400:
+ *          description: 資料驗證失敗 (例如欄位遺失或格式錯誤)
+ *          content:
+ *            application/json:
+ *              schema:
+ *                type: object
+ *                properties:
+ *                  title:
+ *                    type: string
+ *                    example: Validation Error
+ *                  message:
+ *                    type: string
+ *                    example: The provided MAC address format is invalid.
+ * 
+ *        500:
+ *          description: 伺服器內部錯誤 (例如資料庫連線失敗)
+ *          content:
+ *            application/json:
+ *              schema:
+ *                type: object
+ *                properties:
+ *                  title:
+ *                    type: string
+ *                    example: Server Error
+ *                  message:
+ *                    type: string
+ *                    example: Failed to insert data into MariaDB.
+ */
+
+router.post('/AddNewDevices', hostController.handlePostNewDevices);
+
+/** 
+ * components:
+ *   schemas:
+ *     HostInput:
+ *       type: object
+ *       required:
+ *         - name
+ *         - location
+ *         - ip_address
+ *         - gateway
+ *         - mac_address
+ *         - department_id
+ *         - status
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: 裝置名稱 (CHAR(32))
+ *           maxLength: 32
+ *           example: "Server-Rack-05"
+ *         location:
+ *           type: string
+ *           description: 裝置所在位置 (CHAR(32))
+ *           maxLength: 32
+ *           example: "Data Center A"
+ *         ip_address:
+ *           type: string
+ *           format: "ipv4 or ipv6" # 提醒開發者格式
+ *           description: IP 地址 (INET6)
+ *           example: "192.168.1.50"
+ *         gateway:
+ *           type: string
+ *           format: "ipv4 or ipv6"
+ *           description: 閘道器地址 (INET6)
+ *           example: "192.168.1.1"
+ *         mac_address:
+ *           type: string
+ *           description: MAC 地址 (需後端轉換為 BIGINT)
+ *           example: "A1:B2:C3:D4:E5:F6"
+ *         department_id:
+ *           type: integer
+ *           format: int64 # 對應 MariaDB 的 INT(10) UNSIGNED
+ *           description: 所屬部門 ID (INT(10) UNSIGNED)
+ *           example: 105
+ *         status:
+ *           type: integer
+ *           format: int32
+ *           description: 狀態 (TINYINT(1), 1=啟用, 0=停用)
+ *           example: 1
+ */
