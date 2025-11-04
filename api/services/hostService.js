@@ -115,7 +115,7 @@ async function postNewDevice(deviceData) {
     conn = await pool.getConnection();
 
     const result = await conn.query(
-      "INSERT INTO host (name, location, ip, gateway, mac_addr, status, department) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO host (name, location, ip, gateway, mac_addr, status, department, importance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       [
         deviceData.name,
         deviceData.location,
@@ -124,6 +124,7 @@ async function postNewDevice(deviceData) {
         deviceData.mac_addr,
         deviceData.status,
         deviceData.department,
+        deviceData.importance
       ]
     );
     console.log("New device added:", result);
