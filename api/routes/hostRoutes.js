@@ -224,6 +224,60 @@ router.get('/status', hostController.handleGetHostStatus);
 
 router.post('/AddNewDevices', hostController.handlePostNewDevices);
 
+/** 
+ * components:
+ *   schemas:
+ *     HostInput:
+ *       type: object
+ *       required:
+ *         - name
+ *         - location
+ *         - ip_address
+ *         - gateway
+ *         - mac_address
+ *         - department_id
+ *         - status
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: 裝置名稱 (CHAR(32))
+ *           maxLength: 32
+ *           example: "Server-Rack-05"
+ *         location:
+ *           type: string
+ *           description: 裝置所在位置 (CHAR(32))
+ *           maxLength: 32
+ *           example: "Data Center A"
+ *         ip:
+ *           type: string
+ *           format: "ipv4 or ipv6" # 提醒開發者格式
+ *           description: IP 地址 (INET6)
+ *           example: "192.168.1.50"
+ *         gateway:
+ *           type: string
+ *           format: "ipv4 or ipv6"
+ *           description: 閘道器地址 (INET6)
+ *           example: "192.168.1.1"
+ *         mac_addr:
+ *           type: string
+ *           description: MAC 地址 (需後端轉換為 BIGINT)
+ *           example: "A1:B2:C3:D4:E5:F6"
+ *         department:
+ *           type: integer
+ *           format: int64 # 對應 MariaDB 的 INT(10) UNSIGNED
+ *           description: 所屬部門 ID (INT(10) UNSIGNED)
+ *           example: 105
+ *         status:
+ *           type: integer
+ *           format: int32
+ *           description: 狀態 (TINYINT(1), 1=啟用, 0=停用)
+ *           example: 1
+ *        importance:
+ *          type: integer
+ *          format: int32
+ *         description: 重要性等級 (TINYINT(1), 1~5)
+ */
+
 /**
  * @swagger
  * /host/building:
@@ -413,52 +467,4 @@ module.exports = router;
  *           example: "0"
  */
 
-/** 
- * components:
- *   schemas:
- *     HostInput:
- *       type: object
- *       required:
- *         - name
- *         - location
- *         - ip_address
- *         - gateway
- *         - mac_address
- *         - department_id
- *         - status
- *       properties:
- *         name:
- *           type: string
- *           description: 裝置名稱 (CHAR(32))
- *           maxLength: 32
- *           example: "Server-Rack-05"
- *         location:
- *           type: string
- *           description: 裝置所在位置 (CHAR(32))
- *           maxLength: 32
- *           example: "Data Center A"
- *         ip_address:
- *           type: string
- *           format: "ipv4 or ipv6" # 提醒開發者格式
- *           description: IP 地址 (INET6)
- *           example: "192.168.1.50"
- *         gateway:
- *           type: string
- *           format: "ipv4 or ipv6"
- *           description: 閘道器地址 (INET6)
- *           example: "192.168.1.1"
- *         mac_address:
- *           type: string
- *           description: MAC 地址 (需後端轉換為 BIGINT)
- *           example: "A1:B2:C3:D4:E5:F6"
- *         department_id:
- *           type: integer
- *           format: int64 # 對應 MariaDB 的 INT(10) UNSIGNED
- *           description: 所屬部門 ID (INT(10) UNSIGNED)
- *           example: 105
- *         status:
- *           type: integer
- *           format: int32
- *           description: 狀態 (TINYINT(1), 1=啟用, 0=停用)
- *           example: 1
- */
+
