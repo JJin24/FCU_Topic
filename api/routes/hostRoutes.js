@@ -160,7 +160,6 @@ router.get('/status', hostController.handleGetHostStatus);
 
 /**
  * @swagger
- * paths:
  *  /host/AddNewDevices:
  *    post:
  *      summary: 新增單筆主機裝置資訊
@@ -420,7 +419,6 @@ router.get('/building/:building', hostController.handleGetHostNameByBuilding);
  */
 router.post('/history', hostController.handleGetSearchHistory);
 
-module.exports = router;
 
 /**
  * @swagger
@@ -467,4 +465,79 @@ module.exports = router;
  *           example: "0"
  */
 
+/**
+ * 
+ * @swagger
+ * /host/alertflowcount:
+ *    get:
+ *      summary: 獲取「指定地點」近一小時內受攻擊的裝置摘要
+ *      description: 查詢特定地點(Location)在過去一小時內所有被攻擊的裝置(Host)，並依據攻擊類型(Label)分類計數。
+ *      tags: [host]
+ *      parameters:
+ *        - in: query
+ *          name: location
+ *          required: true
+ *          schema:
+ *            type: string
+ *            description: "要篩選的裝置地點 (例如: 人言大樓)"
+ *          example: "資電大樓"
+ *      responses:
+ *        200:
+ *          description: 成功返回摘要列表 (如果沒有攻擊，則返回空陣列 [])
+ *          content:
+ *            application/json:
+ *              schema:
+ *                type: array
+ *                items:
+ *                  $ref: '#/components/schemas/HostSummaryItem'
+ *        400:
+ *          description: 缺少'location'查詢參數
+ *          content:
+ *            application/json:
+ *              schema:
+ *                $ref: '#/components/schemas/ErrorResponse'
+ *        500:
+ *          description: 伺服器內部錯誤
+ *          content:
+ *            application/json:
+ *              schema:
+ *                $ref: '#/components/schemas/ErrorResponse'
+ */
 
+router.get('/alertflowcount', hostController.handleAlertFlowCount);
+
+module.exports = router;
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     HostSummaryItem:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: 裝置名稱
+ *           example: "Main-Server"
+ *         location:
+ *           type: string
+ *           description: 裝置位置
+ *           example: "資電大樓"
+ *         ip:
+ *           type: string
+ *           format: ipv6
+ *           description: 裝置 IP
+ *           example: "::ffff:192.168.1.100"
+ *         importance:
+ *           type: integer
+ *           description: 裝置重要性等級
+ *           example: 3
+ *         attack_label:
+ *           type: integer
+ *           description: 攻擊類型標籤 ID
+ *           example: 5
+ *         attack_count:
+ *           type: integer
+ *           description: 該裝置遭受此類攻擊的次數
+ *           example: 10
+ */

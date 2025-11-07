@@ -135,6 +135,42 @@ const handleGetSearchHistory = async (req, res) => {
   }
 };
 
+const handleAlertFlowCount = async (req, res) => {
+  // 1. 記錄操作
+  console.log("Attempting to get hourly host summary by location.");
+
+  try {
+    // 2. 從 req.query (GET 請求) 中獲取 location
+    //    我們把 "location 存不存在" 的驗證交給 Service 層處理
+    const { location } = req.query;
+
+    // 3. 呼叫服務層，處理所有資料庫邏輯
+    const summaryData = await hostService.getFlowCountByLocationAndHost(location);
+
+    // 4. 成功回應 (200 OK)
+    //    (我們假設 summaryData 是一個陣列)
+    res.status(200).json(summaryData); 
+  } catch (error) {
+    // 5. 錯誤處理
+    console.error("Error fetching host summary:", error.message);
+
+    // 檢查是否為資料驗證錯誤 (例如 location 缺失)
+    if (error.isValidationError) {
+      return res.status(400).json({
+          title: 'Validation Error',
+          message: error.message || 'The provided data failed validation.'
+      });
+    }
+
+    // 預設為伺服器內部錯誤 (500 Internal Server Error)
+    return res.status(500).json({
+        title: 'Server Error',
+        message: 'Failed to retrieve data from MariaDB.'
+    });
+  }
+};
+
+
 module.exports = {
   handleGetAllHost,
   handleGetHostByIP,
@@ -143,5 +179,6 @@ module.exports = {
   handlePostNewDevices,
   handleBuildingList,
   handleGetHostNameByBuilding,
-  handleGetSearchHistory
+  handleGetSearchHistory,
+  handleAlertFlowCount
 };
