@@ -250,15 +250,9 @@ async function getSearchHistory(building, host_names, start_time, end_time, fina
   }
 };
 
-async function getFlowCountByLocationAndHost(location) {
+async function getFlowCountByLocationAndHost() {
   var conn;
   try{
-    // 1. 驗證 location (這是您 Controller 中 error.isValidationError 的來源)
-    if (!location) {
-        const error = new Error("缺少 'location' 查詢參數");
-        error.isValidationError = true;
-        throw error;
-    }
 
     conn = await pool.getConnection();
 
@@ -279,7 +273,6 @@ async function getFlowCountByLocationAndHost(location) {
           host AS h ON f.dst_ip = h.ip
       WHERE
           f.timestamp >= '2025-09-07 17:45:30'
-          AND h.location = ? 
       GROUP BY
           h.name, h.location, h.ip, h.importance, ah.label
       ORDER BY
@@ -287,7 +280,7 @@ async function getFlowCountByLocationAndHost(location) {
     `;
 
     // 3. 執行查詢：將 [location] 變數作為第二個參數傳入
-    const host = await conn.query(sql, [location]);
+    const host = await conn.query(sql);
     console.log(host);
     return host;
   }

@@ -145,7 +145,7 @@ const handleAlertFlowCount = async (req, res) => {
     const { location } = req.query;
 
     // 3. 呼叫服務層，處理所有資料庫邏輯
-    const summaryData = await hostService.getFlowCountByLocationAndHost(location);
+    const summaryData = await hostService.getFlowCountByLocationAndHost();
 
     // 4. 成功回應 (200 OK)
     //    (我們假設 summaryData 是一個陣列)
