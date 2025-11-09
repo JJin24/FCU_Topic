@@ -473,14 +473,6 @@ router.post('/history', hostController.handleGetSearchHistory);
  *      summary: 獲取「指定地點」近一小時內受攻擊的裝置摘要
  *      description: 查詢特定地點(Location)在過去一小時內所有被攻擊的裝置(Host)，並依據攻擊類型(Label)分類計數。
  *      tags: [host]
- *      parameters:
- *        - in: query
- *          name: location
- *          required: true
- *          schema:
- *            type: string
- *            description: "要篩選的裝置地點 (例如: 人言大樓)"
- *          example: "資電大樓"
  *      responses:
  *        200:
  *          description: 成功返回摘要列表 (如果沒有攻擊，則返回空陣列 [])
@@ -495,13 +487,27 @@ router.post('/history', hostController.handleGetSearchHistory);
  *          content:
  *            application/json:
  *              schema:
- *                $ref: '#/components/schemas/ErrorResponse'
+ *                type: object
+ *                properties:
+ *                  title:
+ *                    type: string
+ *                    example: Validation Error
+ *                  message:
+ *                    type: string
+ *                    example: The provided data failed validation.
  *        500:
  *          description: 伺服器內部錯誤
  *          content:
  *            application/json:
  *              schema:
- *                $ref: '#/components/schemas/ErrorResponse'
+ *                type: object
+ *                properties:
+ *                  title:
+ *                    type: string
+ *                    example: Server Error
+ *                  message:
+ *                    type: string
+ *                    example: Failed to retrieve data from MariaDB.
  */
 
 router.get('/alertflowcount', hostController.handleAlertFlowCount);
