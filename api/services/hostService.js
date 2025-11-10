@@ -334,6 +334,57 @@ async function getAllFlowCountByLocationAndHost() {
   }
 };
 
+async function getSpecifiedTimeFlowCount(startTime, endTime) {
+  var conn;
+  try{
+
+    if (!startTime || !endTime) {
+        const error = new Error("缺少 'start_time' 或 'end_time' 參數");
+        error.isValidationError = true;
+        throw error;
+    }
+    
+    conn = await pool.getConnection();
+
+    // 2. SQL 查詢：將 '資電大樓' 替換為 '?'
+    const sql = `
+      SELECT
+          h.name,
+          h.location,
+          h.ip,
+          h.importance,
+          ah.label AS attack_label,
+          COUNT(*) AS attack_count
+      FROM
+          flow AS f
+      JOIN
+          alert_history AS ah ON f.id = ah.id
+      JOIN
+          host AS h ON f.dst_ip = h.ip
+      WHERE
+          f.timestamp BETWEEN ? AND ?
+      GROUP BY
+          h.name, h.location, h.ip, h.importance, ah.label
+      ORDER BY
+          attack_count DESC;
+    `;
+
+    const params = [startTime, endTime];
+
+    // 3. 執行查詢：將 [location] 變數作為第二個參數傳入
+    const host = await conn.query(sql, params);
+    console.log(host);
+    return host;
+  }
+  catch(err){
+    console.error('Error in getFlowCountByLocationAndHost', err);
+    throw err;
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+};
+
 module.exports = {
   getAllHost,
   getHostByIP,
@@ -347,6 +398,7 @@ module.exports = {
   getHostNameByBuilding,
   getSearchHistory,
   getHourlyFlowCountByLocationAndHost,
-  getAllFlowCountByLocationAndHost
+  getAllFlowCountByLocationAndHost,
+  getSpecifiedTimeFlowCount
 };
 
