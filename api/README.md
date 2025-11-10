@@ -15,7 +15,7 @@
     [FireBase Console](https://console.firebase.google.com/) &rarr; 對應專案 &rarr; 左側工具列 &rarr; 專案設定 &rarr; 服務帳戶 &rarr; Firebase Admin SDK &rarr; Node.js &rarr; 產生新的私密金鑰。
 
 3. 將下載的 Firebase Admin SDK 金鑰移動到 `/api/`，並重新命名為 `FCM_Key.json` 以方便 API 使用 FCM 的通知發送。
-4. 編輯 [.env](./.env) 檔案中所有的設定，此配置檔案將會被運用在資料庫連線的設定上面。
+4. 編輯 [.env.example](./.env.example) 檔案為 `.env` 後，更新配置檔中所有的設定，此配置檔案將會被運用在資料庫連線的設定上面。
 5. 現在 API 使用端口 3000，使用前請將在防火牆中做對應的設定，避免無法連線。
 6. 目前 API 僅使用 HTTP 的連線，若要加上 HTTPS，請自行設定。
 
