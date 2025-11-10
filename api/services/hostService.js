@@ -334,6 +334,7 @@ async function getAllFlowCountByLocationAndHost() {
   }
 };
 
+<<<<<<< HEAD
 async function getSpecifiedTimeFlowCount(startTime, endTime) {
   var conn;
   try{
@@ -385,6 +386,8 @@ async function getSpecifiedTimeFlowCount(startTime, endTime) {
   }
 };
 
+=======
+>>>>>>> 223b02ea42f1be548072bf2b6ff88174a2346739
 module.exports = {
   getAllHost,
   getHostByIP,
@@ -398,7 +401,11 @@ module.exports = {
   getHostNameByBuilding,
   getSearchHistory,
   getHourlyFlowCountByLocationAndHost,
+<<<<<<< HEAD
   getAllFlowCountByLocationAndHost,
   getSpecifiedTimeFlowCount
+=======
+  getAllFlowCountByLocationAndHost
+>>>>>>> 223b02ea42f1be548072bf2b6ff88174a2346739
 };
 

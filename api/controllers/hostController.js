@@ -205,6 +205,7 @@ const handleAllAlertFlowCount = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
 const handleSpecifiedTimeAlertFlowCount = async (req, res) => {
   // 1. 記錄操作
   console.log("Attempting to get hourly host summary by location.");
@@ -240,6 +241,8 @@ const handleSpecifiedTimeAlertFlowCount = async (req, res) => {
   }
 };
 
+=======
+>>>>>>> 223b02ea42f1be548072bf2b6ff88174a2346739
 
 module.exports = {
   handleGetAllHost,
@@ -251,6 +254,10 @@ module.exports = {
   handleGetHostNameByBuilding,
   handleGetSearchHistory,
   handleHourlyAlertFlowCount,
+<<<<<<< HEAD
   handleAllAlertFlowCount,
   handleSpecifiedTimeAlertFlowCount
+=======
+  handleAllAlertFlowCount
+>>>>>>> 223b02ea42f1be548072bf2b6ff88174a2346739
 };
