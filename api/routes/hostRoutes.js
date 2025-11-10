@@ -468,11 +468,7 @@ router.post('/history', hostController.handleGetSearchHistory);
 /**
  * 
  * @swagger
-<<<<<<< HEAD
- * /host/HourlyAlertFlowCount:
-=======
  * /host/hourlyalertflowcount:
->>>>>>> 223b02ea42f1be548072bf2b6ff88174a2346739
  *    get:
  *      summary: 獲取「指定地點」近一小時內受攻擊的裝置摘要
  *      description: 查詢特定地點(Location)在過去一小時內所有被攻擊的裝置(Host)，並依據攻擊類型(Label)分類計數。
@@ -516,11 +512,6 @@ router.post('/history', hostController.handleGetSearchHistory);
 
 router.get('/hourlyalertflowcount', hostController.handleHourlyAlertFlowCount);
 
-<<<<<<< HEAD
-=======
-module.exports = router;
-
->>>>>>> 223b02ea42f1be548072bf2b6ff88174a2346739
 /**
  * @swagger
  * components:
@@ -558,11 +549,7 @@ module.exports = router;
 /**
  * 
  * @swagger
-<<<<<<< HEAD
- * /host/AllAlertFlowCount:
-=======
  * /host/allalertflowcount:
->>>>>>> 223b02ea42f1be548072bf2b6ff88174a2346739
  *    get:
  *      summary: 獲取「指定地點」歷史受攻擊的裝置摘要
  *      description: 查詢特定地點(Location)在過去所有被攻擊的裝置(Host)，並依據攻擊類型(Label)分類計數。
@@ -606,7 +593,6 @@ module.exports = router;
 
 router.get('/allalertflowcount', hostController.handleAllAlertFlowCount);
 
-<<<<<<< HEAD
 /**
  * @swagger
  * components:
@@ -705,8 +691,6 @@ router.get('/allalertflowcount', hostController.handleAllAlertFlowCount);
 
 router.get('/SpecifiedTimeAlertFlowCount', hostController.handleSpecifiedTimeAlertFlowCount);
 
-=======
->>>>>>> 223b02ea42f1be548072bf2b6ff88174a2346739
 module.exports = router;
 
 /**
