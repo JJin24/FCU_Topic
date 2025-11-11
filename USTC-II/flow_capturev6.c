@@ -1,3 +1,14 @@
+/* ===== 程式總覽（逐階段說明） =====
+    階段 A: 初始包含與常數定義（包含 pcap 相關與 thread mutex）
+    階段 B: Flow 資料結構定義與全域變數
+    階段 C: 工具函式（htons_wrapper / htonl_wrapper）
+    階段 D: 與外部 socket 溝通的函式（send_flow_to_socket）
+    階段 E: pcap 檔案的傳送與刪除（send_and_delete_pcap / cleanup_flow_and_send）
+    階段 F: 每個封包的處理子執行緒（process_packet）
+    階段 G: pcap_loop 的封包回呼（packet_handler）
+    階段 H: 背景執行緒（traffic monitor / flow timeout checker）
+    階段 I: 主流程（main - 介面選擇、開啟 pcap、啟動回圈）
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <pcap.h>
@@ -13,6 +24,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <errno.h>
+#include <curl/curl.h>
 #include "common.h"
 
 #define MAX_FLOWS 1024
@@ -21,6 +33,8 @@
 #define FLOW_TIMEOUT_SECONDS 30 // Flow 超時時間
 // --- 從 common.h 引入的結構定義 ---
 #define MAX_PCAP_DATA_SIZE (MAX_PKT_LEN * N_PKTS)
+
+const char *url = "http://127.0.0.1:3000/traffic/report";
 
 // 測試控制元
 int promisc_mode = 1;  //混淆模式，預設開啟
@@ -50,6 +64,9 @@ Flow *flows[MAX_FLOWS];
 pthread_mutex_t flows_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t traffic_mutex = PTHREAD_MUTEX_INITIALIZER;
 unsigned long long total_bytes_sniffed = 0;
+
+// forward declaration for send_traffic_to_api (defined below)
+void send_traffic_to_api(unsigned long long bytes, int interval_seconds);  //傳送為單位為MB/s
 
 
 // 將數據轉換為大端序 (網路位元組序)
@@ -108,7 +125,7 @@ void send_flow_to_socket(const Flow2img_II_context *flow_context) {
 }
 
 // *** 修改 ***: 函式更名並調整職責，僅處理 pcap 檔案的傳送與刪除
-void send_and_delete_pcap(Flow *flow, const char *src_ip, const char *dst_ip, uint16_t src_port, uint16_t dst_port, uint8_t protocol) {
+void send_and_delete_pcap(Flow *flow, const char *src_ip, const char *dst_ip, uint16_t src_port, uint16_t dst_port, uint8_t protocol, const char *reason) {
         char pre_filename[256];
         snprintf(pre_filename, sizeof(pre_filename), "%s_pre.pcap", flow->name);
         
@@ -140,6 +157,10 @@ void send_and_delete_pcap(Flow *flow, const char *src_ip, const char *dst_ip, ui
             if (file_size > 0 && file_size <= MAX_PCAP_DATA_SIZE) {
                 size_t bytes_read = fread(context_data.pcap_data, 1, file_size, pcap_file);
                 context_data.pcap_size = bytes_read;
+                // print sending reason immediately before sending
+                printf("Sending flow %s (%s): %s:%u -> %s:%u, pcap_size=%zu bytes\n",
+                       flow->name, reason, context_data.s_ip, (unsigned)context_data.s_port,
+                       context_data.d_ip, (unsigned)context_data.d_port, bytes_read);
                 send_flow_to_socket(&context_data);
             }
             fclose(pcap_file);
@@ -193,8 +214,8 @@ void *process_packet(void *args) {
         sscanf(flow->name, "%[^_]_%hu-%[^_]_%hu_%hhu",
                src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
 
-        // 呼叫新的函式，只傳送檔案，不清理 Flow
-        send_and_delete_pcap(flow, src_ip_str, dst_ip_str, src_p, dst_p, proto);
+        // 呼叫新的函式，只傳送檔案，不清理 Flow，標註為 N_PKTS 觸發
+        send_and_delete_pcap(flow, src_ip_str, dst_ip_str, src_p, dst_p, proto, "N_PKTS");
         // 此處不再修改 is_active 或釋放 flow，讓它繼續存在
     }
 
@@ -248,21 +269,25 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
         dst_port = ntohs(udp_header->uh_dport);
     }
 
+    // Use the first-seen packet direction as the canonical direction for a new flow.
+    // To find existing flows regardless of packet direction, we'll build both
+    // forward and reverse flow name bases and match either one.
     char flow_name_base[128];
-    if (strcmp(src_ip, dst_ip) < 0 || (strcmp(src_ip, dst_ip) == 0 && src_port < dst_port)) {
-        snprintf(flow_name_base, sizeof(flow_name_base), "%s_%d-%s_%d_%d", src_ip, src_port, dst_ip, dst_port, ip_header->ip_p);
-    } else {
-        snprintf(flow_name_base, sizeof(flow_name_base), "%s_%d-%s_%d_%d", dst_ip, dst_port, src_ip, src_port, ip_header->ip_p);
-    }
+    char flow_name_base_rev[128];
+    snprintf(flow_name_base, sizeof(flow_name_base), "%s_%d-%s_%d_%d", src_ip, src_port, dst_ip, dst_port, ip_header->ip_p);
+    snprintf(flow_name_base_rev, sizeof(flow_name_base_rev), "%s_%d-%s_%d_%d", dst_ip, dst_port, src_ip, src_port, ip_header->ip_p);
 
     pthread_mutex_lock(&flows_mutex);
     int flow_index = -1;
     time_t current_time = time(NULL);
 
     for (int i = 0; i < MAX_FLOWS; i++) {
-        if (flows[i] != NULL && flows[i]->is_active && strncmp(flows[i]->name, flow_name_base, strlen(flow_name_base)) == 0) {
-            flow_index = i;
-            break;
+        if (flows[i] != NULL && flows[i]->is_active) {
+            if (strncmp(flows[i]->name, flow_name_base, strlen(flow_name_base)) == 0 ||
+                strncmp(flows[i]->name, flow_name_base_rev, strlen(flow_name_base_rev)) == 0) {
+                flow_index = i;
+                break;
+            }
         }
     }
     // flow[i]->name 皆未匹配到
@@ -335,9 +360,38 @@ void *traffic_monitor_thread(void *arg) {
         
         double traffic_mbps = (double)bytes_in_interval * 8 / (1000 * 1000);
         printf("Traffic in last %d seconds: %.2f MB\n", TRAFFIC_MONITOR_INTERVAL, traffic_mbps);
+        // send the aggregate bytes to API
+        // best-effort: ignore failures
+        send_traffic_to_api(bytes_in_interval, TRAFFIC_MONITOR_INTERVAL);
         prev_total_bytes = current_total_bytes;
     }
     return NULL;
+}
+
+// Send traffic report to local API endpoint using libcurl
+void send_traffic_to_api(unsigned long long bytes, int interval_seconds) { 
+    CURL *curl = curl_easy_init();
+    if (!curl) return;
+
+    //const char *url = "http://127.0.0.1:3000/traffic/report";
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    char postdata[256];
+    snprintf(postdata, sizeof(postdata), "{\"interval_seconds\": %d, \"bytes\": %llu}", interval_seconds, bytes);
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 2000L); // 2s timeout
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        fprintf(stderr, "Failed to POST traffic report: %s\n", curl_easy_strerror(res));
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
 }
 
 // Flow 超時檢查執行緒
@@ -365,8 +419,8 @@ void *flow_timeout_checker_thread(void *arg) {
                         sscanf(flows[i]->name, "%[^_]_%hu-%[^_]_%hu_%hhu", 
                                src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
 
-                        // 超時前未達到 N_PKTS，傳送現有的封包
-                        send_and_delete_pcap(flows[i], src_ip_str, dst_ip_str, src_p, dst_p, proto);
+                        // 超時前未達到 N_PKTS，傳送現有的封包（標註為 TIMEOUT）
+                        send_and_delete_pcap(flows[i], src_ip_str, dst_ip_str, src_p, dst_p, proto, "TIMEOUT");
                     }
 
                     // *** 修改 ***: 執行最終的清理
@@ -388,6 +442,8 @@ int main() {
     pcap_if_t *alldevs, *dev;
 
     pcap_t *handle = NULL;
+    // initialize libcurl global state for HTTP POST used in traffic monitor
+    curl_global_init(CURL_GLOBAL_ALL);
         if (pcap_findalldevs(&alldevs, errbuf) == -1) {
             fprintf(stderr, "Error in pcap_findalldevs: %s\n", errbuf);
             return 1;
@@ -466,7 +522,7 @@ int main() {
                  sscanf(flows[j]->name, "%[^_]_%hu-%[^_]_%hu_%hhu", 
                         src_ip_str, &src_p, dst_ip_str, &dst_p, &proto);
 
-                 send_and_delete_pcap(flows[j], src_ip_str, dst_ip_str, src_p, dst_p, proto);
+                 send_and_delete_pcap(flows[j], src_ip_str, dst_ip_str, src_p, dst_p, proto, "EXIT");
             }
             if (flows[j]->pcap_dead_handle != NULL) {
                  pcap_close(flows[j]->pcap_dead_handle);
@@ -475,6 +531,9 @@ int main() {
             flows[j] = NULL;
         }
     }
+
+    // cleanup libcurl
+    curl_global_cleanup();
 
     return 0;
 }

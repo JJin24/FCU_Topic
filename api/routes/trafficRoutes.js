@@ -43,5 +43,7 @@ const trafficController = require('../controllers/trafficController');
  *                   example: Failed to retrieve one hour traffic sum data
  */
 router.get('/oneHourSum', trafficController.handleGetOneHourSum);
+// 新增：接收流量報告並存入資料庫
+router.post('/report', trafficController.handleReportTraffic);
 
 module.exports = router;
