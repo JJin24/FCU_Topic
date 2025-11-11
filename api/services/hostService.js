@@ -8,7 +8,7 @@ async function getAllHost() {
 
     const host = await conn.query(
       "SELECT * FROM host"
-    )
+    );
     console.log(host);
     return host;
   }
@@ -28,7 +28,7 @@ async function getHostByIP(ip) {
     const Host = await conn.query(
       "SELECT * FROM host WHERE ip = ?",
       [ip]
-    )
+    );
     console.log(Host);
     return Host;
   }
@@ -48,7 +48,7 @@ async function getHostNameByIP(ip) {
     const ipHost = await conn.query(
       "SELECT name FROM host WHERE ip = ?",
       [ip]
-    )
+    );
     console.log(ipHost);
     return ipHost;
   }
@@ -72,7 +72,7 @@ async function getHostStatus() {
       SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS warn, \
       SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS alert \
       FROM host GROUP BY location;"
-    )
+    );
     console.log(hostStatus);
     return hostStatus;
   }
@@ -97,7 +97,7 @@ async function getBuildingList() {
         host
       GROUP BY
         location;`
-    )
+    );
     console.log(ipHost);
     return ipHost;
   }
@@ -152,7 +152,7 @@ async function getHostNameByBuilding(building) {
       where
         location = ?;`,
       [building]
-    )
+    );
     console.log(host);
     return host;
   }

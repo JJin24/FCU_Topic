@@ -67,7 +67,7 @@ async function getFlowByIP(ip){
       LEFT JOIN protocol_list ON flow.protocol = protocol_list.protocol \
       WHERE src_ip = ? OR dst_ip = ?",
       [ip, ip]
-    )
+    );
     console.log(ipFlow);
     return ipFlow;
   }
@@ -88,7 +88,7 @@ async function getAllFlowIPCount(){
       "SELECT ip, COUNT(*) AS count \
       FROM (SELECT src_ip AS ip FROM flow UNION ALL SELECT dst_ip AS ip FROM flow) AS combined_ips \
       GROUP BY ip\
-      ORDER BY ip ASC;")
+      ORDER BY ip ASC;");
 
     console.log(ipCount);
     return ipCount;
@@ -109,7 +109,7 @@ async function getFlowProtocolCount(){
     const protocolCount = await conn.query(
       "SELECT protocol_list.name AS protocol, COUNT(flow.protocol) as count FROM flow LEFT JOIN protocol_list \
       ON flow.protocol = protocol_list.protocol GROUP BY protocol_list.protocol"
-    )
+    );
     console.log(protocolCount);
     return protocolCount;
   }
@@ -134,7 +134,7 @@ async function getTopXDayFlow(x){
       LEFT JOIN protocol_list ON flow.protocol = protocol_list.protocol \
       WHERE `timestamp` >= NOW() - INTERVAL ? DAY ORDER BY timestamp ASC;",
       [x]
-    )
+    );
     console.log(topXDayFlow);
     return topXDayFlow;
   }
@@ -223,7 +223,7 @@ async function getPerHourAllFlowCount(){
         DATE_FORMAT(TIMESTAMP, '%Y-%m-%d %H:00:00') \
     ) AS flow_counts ON h.hour_floor = flow_counts.flow_hour_floor \
     ORDER BY h.hour_floor ASC;"
-    )
+    );
     console.log(perHourAllFlowCount);
     return perHourAllFlowCount;
   }
@@ -244,7 +244,7 @@ async function getGoodMalCount(){
       "SELECT COUNT(CASE WHEN AH.ID IS NULL THEN F.ID END) AS goodFlowCount, COUNT(AH.ID) AS badFlowCount \
       FROM flow F \
       LEFT JOIN alert_history AH ON F.ID = AH.ID;"
-    )
+    );
     console.log(goodMalCount);
     return goodMalCount;
   }

@@ -7,7 +7,7 @@ async function getProtocolList(){
 
     const protocol_list = await conn.query(
       "SELECT * FROM protocol_list"
-    )
+    );
     console.log(protocol_list);
     return protocol_list;
   }

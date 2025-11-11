@@ -7,7 +7,7 @@ async function getAllLabelList() {
 
     const label_list = await conn.query(
       "SELECT * FROM label_list"
-    )
+    );
     console.log(label_list);
     return label_list;
   }
@@ -27,7 +27,7 @@ async function getLabelNameByID(id){
 
     const labelName = await conn.query(
       "SELECT name FROM label_list WHERE label_id = ?", [id]
-    )
+    );
     console.log(labelName);
     return labelName;
   }

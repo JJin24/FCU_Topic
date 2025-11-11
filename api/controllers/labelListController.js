@@ -22,7 +22,7 @@ const handleGetLabelNameByID = async (req, res) => {
   else{
     res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve label id data' });
   }
-}
+};
 
 module.exports = {
   handleGetAllLabelList,

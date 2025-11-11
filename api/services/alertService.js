@@ -27,7 +27,7 @@ async function getAllAlert() {
       LEFT JOIN HostIPToNameMap AS h_src ON flow.src_ip = h_src.ip \
       LEFT JOIN HostIPToNameMap AS h_dst ON flow.dst_ip = h_dst.ip \
       WHERE ah.status = 0;"
-    )
+    );
     console.log(alert_history);
     return alert_history;;
   }
@@ -65,7 +65,7 @@ async function getNotDealAlert(){
       LEFT JOIN HostIPToNameMap AS h_src ON flow.src_ip = h_src.ip \
       LEFT JOIN HostIPToNameMap AS h_dst ON flow.dst_ip = h_dst.ip \
       WHERE ah.status = 0;"
-    )
+    );
     console.log(topXDayFlow);
     return topXDayFlow;
   }

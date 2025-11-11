@@ -25,7 +25,7 @@ const sendNotificationToMulti = async (registrationTokens, title, body) => {
       }
     },
     tokens: registrationTokens
-  }
+  };
   try {
     const response = await admin.messaging().sendEachForMulticast(message);
     if (response.failureCount > 0) {
@@ -45,7 +45,7 @@ const sendNotificationToMulti = async (registrationTokens, title, body) => {
     console.error('Error sending notification:', error);
     return false; // Indicate failure on error
   }
-}
+};
 module.exports = {
   sendNotificationToMulti
 };
