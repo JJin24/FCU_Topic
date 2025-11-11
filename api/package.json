@@ -4,7 +4,10 @@
   "description": "The API help connect between App and MariaDB.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "lint": "eslint .",
+    "test": "jest",
+    "ci-check": "npm run lint && npm run test"
   },
   "author": "",
   "license": "ISC",
@@ -15,6 +18,11 @@
     "mariadb": "^3.4.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   }
