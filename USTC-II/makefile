@@ -2,7 +2,7 @@ CC=gcc
 # CFLAGS: 編譯器旗標 (警告、最佳化等)
 CFLAGS=-Wall -Wextra -O3
 # LDFLAGS: 連結器旗標 (要連結的函式庫)
-LDFLAGS=-lpcap -lpthread -lhiredis -pthread
+LDFLAGS=-lpcap -lpthread -lhiredis -pthread -lcurl
 
 # 預設目標 'all' 依賴於我們的最終執行檔
 all: Flow2img Flow2img_II Capture_Flow HAST_Two Flow_Capture5 Flow_Capture_v6
@@ -29,5 +29,4 @@ Flow_Capture_v6: flow_capturev6.c
 # 'clean' 目標，用於清除編譯產生的檔案
 clean:
 	rm -f Flow2img Capture_Flow Flow2img_II HAST_Two Flow_Capture5 Flow_Capture_v6
-
 .PHONY: all clean
