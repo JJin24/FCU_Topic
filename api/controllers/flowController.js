@@ -121,6 +121,17 @@ const handleGetLocationGraph = async (req, res) => {
   }
 };
 
+const handleGetTopNFlows = async (req, res) => {
+  const result = await flowService.getTopNFlows();
+
+  if (result) {
+    res.json(result);
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve top N flows data' });
+  }
+};
+
 module.exports = {
   handleGetAllFlow,
   handleGetFlowByUUID,
@@ -131,5 +142,6 @@ module.exports = {
   handleGet24HourFlowCount,
   handleGetPerHourAllFlowCount,
   handleGetGoodMalCount,
-  handleGetLocationGraph
+  handleGetLocationGraph,
+  handleGetTopNFlows
 };

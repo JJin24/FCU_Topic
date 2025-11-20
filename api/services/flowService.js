@@ -1,4 +1,8 @@
 const pool = require('./database');
+const maxmind = require('maxmind');
+const path = require('path');
+
+let mmdbLookup = null;
 
 // getFlow 會取得 flow 資料表的後 1000 筆資料
 // 並且使會取得 uuid, timestamp, src_ip, src_port, dst_ip, dst_port, protocol
@@ -332,6 +336,101 @@ async function getLocationGraph(locationName) {
   }
 }
 
+async function getTopNFlows(){
+  var conn;
+  try{
+    conn = await pool.getConnection();
+
+    if (!mmdbLookup) {
+      const dbPath = path.join(__dirname, '..', 'ipinfo.mmdb');
+      mmdbLookup = await maxmind.open(dbPath);
+    }
+
+    const rows = await conn.query(
+      `SELECT 
+          derived.ip, 
+          h.name AS hostname,
+          derived.total_frequency
+      FROM (
+          SELECT ip, COUNT(*) AS total_frequency
+          FROM (
+              SELECT src_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 324 HOUR
+              UNION ALL
+              SELECT dst_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 324 HOUR
+          ) AS union_ips
+          GROUP BY ip
+          ORDER BY total_frequency DESC
+          LIMIT 20
+      ) AS derived
+      LEFT JOIN host h ON derived.ip = h.ip
+      ORDER BY derived.total_frequency DESC;`
+    );
+    const result = rows.map(row => {
+      let ip = row.ip;
+
+      // [關鍵步驟] 在這裡處理 ::ffff:
+      if (ip && ip.startsWith('::ffff:')) {
+          ip = ip.substring(7); // 去掉前 7 個字元 (::ffff:)
+      }
+
+      let country = '';
+      let asName = '';
+      let finalHostname = row.db_hostname; // 優先使用內部資料庫的 hostname
+
+      // 判斷 Private IP (內網)
+      const isPrivate = ip.startsWith('10.') || 
+                        ip.startsWith('192.168.') || 
+                        ip.startsWith('127.') ||
+                        (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31);
+
+      if (isPrivate) {
+          country = 'LAN';
+          asName = 'Private Network';
+          // 如果 DB 沒名字，給個預設值
+          if (!finalHostname) finalHostname = 'Internal Device';
+      } else {
+          const info = mmdbLookup.get(ip);
+
+          if (info) {
+              // 取得 Country
+              country = info.country || info.country_code || 'Unknown';
+
+              // 取得 AS Name (ISP/組織) - IPinfo 通常在 'org' 欄位
+              asName = info.org || info.asn_organization || 'Unknown ISP';
+
+              // 如果 DB 沒名字，嘗試用 MMDB 補全
+              if (!finalHostname) {
+                  // 優先順序: MMDB的hostname > MMDB的org > Unknown
+                  finalHostname = info.hostname || asName || 'External Host';
+              }
+          } else {
+              country = 'Unknown';
+              asName = 'Unknown';
+              if (!finalHostname) finalHostname = 'Unknown Host';
+          }
+      }
+
+      // ---------------------------------------------------------
+      // 4. 回傳指定的欄位
+      // ---------------------------------------------------------
+      return {
+          hostname: finalHostname,
+          total_frequency: row.total_frequency,
+          ip: ip,           // 乾淨的 IP
+          country: country,
+          as_name: asName
+      };
+        });
+
+        return result;
+            } catch (err) {
+        console.error('getTopNFlows Error:', err);
+        throw err;
+    } finally {
+        if (conn) conn.release();
+    }
+}
+
 module.exports = {
   getAllFlow,
   getFlowByUUID,
@@ -342,5 +441,6 @@ module.exports = {
   get24HourFlowCount,
   getPerHourAllFlowCount,
   getGoodMalCount,
-  getLocationGraph
+  getLocationGraph,
+  getTopNFlows
 };

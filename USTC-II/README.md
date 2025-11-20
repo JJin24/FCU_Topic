@@ -12,10 +12,10 @@
 
 ## 編譯
 
-1. 請先安裝以下套件 `libpcap-dev`、`redis-server`、`redis-tools`、`libhiredis-dev`、`libevent-dev`
+1. 請先安裝以下套件 `libpcap-dev`、`redis-server`、`redis-tools`、`libhiredis-dev`、`libevent-dev`、`libcurl3-dev`
 
 ```bash
-apt install libpcap-dev redis-server redis-tools libhiredis-dev libevent-dev
+apt install libpcap-dev redis-server redis-tools libhiredis-dev libevent-dev libcurl3-dev
 ```
 
 2. 在此資料夾中使用 `make` 指令將會自動編譯此上述的 5 個程式。
@@ -170,3 +170,4 @@ socket 傳送的資料格式如下 (待補充)
 > 因為當初設計 `Flow2img_II_Proxy` 結構的時候，因為不確定傳送端會傳送多大的 pcap 資料過來，所以設計先讀取 `pcap_size` 後再替 `pcap_data` 準備 buffer 使用。後期因為直接先定義 `pcap_data` 可用的 buffer 大小為 `sizeof(uint8_t) * MAX_PKT_LEN * N_PKTS` 個 Bytes，所以可以直接實際上該步驟並沒有實際的幫助。
 >
 > 但為使其他尚未記載的資訊可以方便先行傳送，因此目前暫時保留此傳送機制。
+
