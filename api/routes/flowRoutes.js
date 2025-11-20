@@ -433,6 +433,8 @@ router.get('/goodMalCount', flowController.handleGetGoodMalCount);
  */
 router.get('/locationGraph/:locationName', flowController.handleGetLocationGraph);
 
+router.get('/topN',flowController.handleGetTopNFlows);
+
 module.exports = router;
 
 /**
