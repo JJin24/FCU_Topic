@@ -86,7 +86,6 @@ router.get('/', labelListController.handleGetAllLabelList);
  */
 router.get('/id/:id', labelListController.handleGetLabelNameByID);
 
-module.exports = router;
 
 /**
  * @swagger
@@ -101,4 +100,158 @@ module.exports = router;
  *         name:
  *           type: string
  *           example: "DDoS_LOIC"
+ */
+
+/**
+ * @swagger
+ * /labelList/HourlyAttackTypesByLocation:
+ *   get:
+ *     summary: 取得指定地點「近一小時」收到的「攻擊類型列表」(不重複)
+ *     description: 回傳一個包含指定地點在近一小時內收到的所有不重複攻擊類型標籤的陣列。
+ *     tags: [labelList]
+ *     parameters:
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 要篩選的裝置地點 (例如 "資電大樓")
+ *         example: "資電大樓"
+ *     responses:
+ *       200:
+ *         description: 成功取得攻擊類型列表。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   label:
+ *                     type: integer
+ *                     example: 3
+ *                   label_name:
+ *                     type: string
+ *                     example: "DoS_GoldenEye"
+ *       400:
+ *         description: 缺少或無效的查詢參數。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: Validation Error
+ *                 message:
+ *                   type: string
+ *                   example: 缺少 'location' 查詢參數
+ *       500:
+ *         description: 伺服器錯誤，無法從資料庫取得資料。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: Server Error
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve data from MariaDB.
+ */
+
+router.get('/HourlyAttackTypesByLocation', labelListController.handleGetHourlyAttackTypesByLocation);
+module.exports = router;
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     AttackType:
+ *       type: object
+ *       properties:
+ *          label:
+ *            type: integer
+ *            example: 3
+ *          label_name:
+ *            type: string
+ *            example: "DoS_GoldenEye"
+ */
+
+/**
+ * @swagger
+ * /labelList/AllAttackTypesByLocation:
+ *   get:
+ *     summary: 取得指定地點在過去所收到的所有「攻擊類型列表」(不重複)
+ *     description: 回傳一個包含指定地點在過去收到的所有不重複攻擊類型標籤的陣列。
+ *     tags: [labelList]
+ *     parameters:
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 要篩選的裝置地點 (例如 "資電大樓")
+ *         example: "資電大樓"
+ *     responses:
+ *       200:
+ *         description: 成功取得攻擊類型列表。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   label:
+ *                     type: integer
+ *                     example: 3
+ *                   label_name:
+ *                     type: string
+ *                     example: "DoS_GoldenEye"
+ *       400:
+ *         description: 缺少或無效的查詢參數。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: Validation Error
+ *                 message:
+ *                   type: string
+ *                   example: 缺少 'location' 查詢參數
+ *       500:
+ *         description: 伺服器錯誤，無法從資料庫取得資料。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: Server Error
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve data from MariaDB.
+ */
+
+router.get('/AllAttackTypesByLocation', labelListController.handleGetAllAttackTypesByLocation);
+module.exports = router;
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     AttackType:
+ *       type: object
+ *       properties:
+ *          label:
+ *            type: integer
+ *            example: 3
+ *          label_name:
+ *            type: string
+ *            example: "DoS_GoldenEye"
  */
