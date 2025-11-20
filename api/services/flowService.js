@@ -2,6 +2,8 @@ const pool = require('./database');
 const maxmind = require('maxmind');
 const path = require('path');
 
+let mmdbLookup = null;
+
 // getFlow 會取得 flow 資料表的後 1000 筆資料
 // 並且使會取得 uuid, timestamp, src_ip, src_port, dst_ip, dst_port, protocol
 async function getAllFlow() {
@@ -340,11 +342,11 @@ async function getTopNFlows(){
     conn = await pool.getConnection();
 
     if (!mmdbLookup) {
-      const dbPath = path.join(__dirname, 'db', 'ipinfo.mmdb');
+      const dbPath = path.join(__dirname, '..', 'ipinfo.mmdb');
       mmdbLookup = await maxmind.open(dbPath);
     }
 
-    const topNFlows = await conn.query(
+    const rows = await conn.query(
       `SELECT 
           derived.ip, 
           h.name AS hostname,
@@ -352,9 +354,9 @@ async function getTopNFlows(){
       FROM (
           SELECT ip, COUNT(*) AS total_frequency
           FROM (
-              SELECT src_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 24 HOUR
+              SELECT src_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 324 HOUR
               UNION ALL
-              SELECT dst_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 24 HOUR
+              SELECT dst_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 324 HOUR
           ) AS union_ips
           GROUP BY ip
           ORDER BY total_frequency DESC
@@ -364,7 +366,7 @@ async function getTopNFlows(){
       ORDER BY derived.total_frequency DESC;`
     );
     const result = rows.map(row => {
-      let ip = row.raw_ip;
+      let ip = row.ip;
 
       // [關鍵步驟] 在這裡處理 ::ffff:
       if (ip && ip.startsWith('::ffff:')) {
@@ -439,5 +441,6 @@ module.exports = {
   get24HourFlowCount,
   getPerHourAllFlowCount,
   getGoodMalCount,
-  getLocationGraph
+  getLocationGraph,
+  getTopNFlows
 };
