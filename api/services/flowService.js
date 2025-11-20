@@ -354,9 +354,9 @@ async function getTopNFlows(){
       FROM (
           SELECT ip, COUNT(*) AS total_frequency
           FROM (
-              SELECT src_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 324 HOUR
+              SELECT src_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 24 HOUR
               UNION ALL
-              SELECT dst_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 324 HOUR
+              SELECT dst_ip AS ip FROM flow WHERE timestamp >= NOW() - INTERVAL 24 HOUR
           ) AS union_ips
           GROUP BY ip
           ORDER BY total_frequency DESC
@@ -375,7 +375,7 @@ async function getTopNFlows(){
 
       let country = '';
       let asName = '';
-      let finalHostname = row.db_hostname; // 優先使用內部資料庫的 hostname
+      let finalHostname = row.hostname; // 優先使用內部資料庫的 hostname
 
       // 判斷 Private IP (內網)
       const isPrivate = ip.startsWith('10.') || 
@@ -385,7 +385,7 @@ async function getTopNFlows(){
 
       if (isPrivate) {
           country = 'LAN';
-          asName = 'Private Network';
+          asName = finalHostname;
           // 如果 DB 沒名字，給個預設值
           if (!finalHostname) finalHostname = 'Internal Device';
       } else {
@@ -396,7 +396,7 @@ async function getTopNFlows(){
               country = info.country || info.country_code || 'Unknown';
 
               // 取得 AS Name (ISP/組織) - IPinfo 通常在 'org' 欄位
-              asName = info.org || info.asn_organization || 'Unknown ISP';
+              asName = info.org || info.as_name || 'Unknown ISP';
 
               // 如果 DB 沒名字，嘗試用 MMDB 補全
               if (!finalHostname) {
