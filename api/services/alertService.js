@@ -51,11 +51,12 @@ async function getNotDealAlert(){
       SELECT dst_ip AS ip FROM flow \
       ), \
       HostIPToNameMap AS ( \
-          SELECT rh.ip, host.name AS hostname \
+          SELECT rh.ip, host.name AS hostname,host.location \
           FROM RelevantHostIPs AS rh \
           INNER JOIN host ON rh.ip = host.ip \
       ) \
       SELECT flow.uuid, COALESCE(h_src.hostname, h_dst.hostname) AS hostname, \
+      COALESCE(h_src.location, h_dst.location) AS location, \
       flow.timestamp, flow.src_ip, flow.src_port, flow.dst_ip, flow.dst_port, \
       protocol_list.name AS protocol, label_list.name AS label, ah.score, ah.status \
       FROM flow \
