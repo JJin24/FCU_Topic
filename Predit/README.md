@@ -2,7 +2,19 @@
 
 ## 前置處理
 
+在 ubuntu 系統中，請安裝相關的開發套件
+
+```bash
+apt install python3-dev libmariadb-dev
+```
+
 在使用 `predit.py` 前需要建立一個 python 的虛擬環境，並且使用 `pip` 安裝以下套件
+
+```bash
+pip install mariadb numpy Pillow redis torch
+```
+
+抑或是使用
 
 ```bash
 pip install -r requirements.txt
