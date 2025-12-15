@@ -1,6 +1,6 @@
 # USTC-II 相關程式內容
 
-目前使用 `make` 指令將會編譯出 5 個程式，分別是 Flow2img、Flow2img_II、Capture_Flow、Flow2img_II、Flow_Capture_v6。相關程式碼的功能及用途如下。
+目前使用 `make` 指令將會編譯出 5 個程式，分別是 Flow2img、Flow2img_II、Capture_Flow、RealTime_Flow2img_Convert、Flow_Capture_v6。相關程式碼的功能及用途如下。
 
 ## 使用的第三方套件與授權
 
