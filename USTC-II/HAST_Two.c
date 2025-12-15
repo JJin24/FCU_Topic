@@ -2,14 +2,12 @@
 #include "redis_handler.h"
 
 /* 外部 Header */
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
 #include "de_addr_noise.h"
 
-// 函式宣告 (因為它們只在此檔案中使用，設為 static)
-static unsigned int extract_n_packets_from_pcap(uint8_t *pcap_data, size_t pcap_len, int n, const uint8_t **pkt_arr, int *pkt_lens);
-static uint8_t* get_n_byte_from_pkt(int n, const uint8_t *pkt, int pkt_len);
-static void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256][n], int current_get_bytes);
+// 函式宣告
+unsigned int extract_n_packets_from_pcap(uint8_t *pcap_data, size_t pcap_len, int n, const uint8_t **pkt_arr, int *pkt_lens);
+uint8_t* get_n_byte_from_pkt(int n, const uint8_t *pkt, int pkt_len);
+void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256][n], int current_get_bytes);
 
 
 // 主處理函式，將作為執行緒池的任務
@@ -113,7 +111,7 @@ void Flow2img_HAST_Two(void *arg) {
  *   - pkt_arr: 指向每個 packet 的指標陣列
  *   - pkt_lens: 每個 pkt 的長度陣列
  */
-static unsigned int extract_n_packets_from_pcap(uint8_t *pcap_data, size_t pcap_len, int n, const uint8_t **pkt_arr, int *pkt_lens) {
+unsigned int extract_n_packets_from_pcap(uint8_t *pcap_data, size_t pcap_len, int n, const uint8_t **pkt_arr, int *pkt_lens) {
     char errbuf[PCAP_ERRBUF_SIZE];
     // 使用 fmemopen 從記憶體中讀取 pcap data
     FILE *pcap_stream = fmemopen(pcap_data, pcap_len, "rb");
@@ -151,7 +149,7 @@ static unsigned int extract_n_packets_from_pcap(uint8_t *pcap_data, size_t pcap_
 }
 
 
-static uint8_t* get_n_byte_from_pkt(int n, const uint8_t *pkt, int pkt_len) {
+uint8_t* get_n_byte_from_pkt(int n, const uint8_t *pkt, int pkt_len) {
     uint8_t *n_byte_data = malloc(n);
     if (!n_byte_data) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -180,7 +178,7 @@ static uint8_t* get_n_byte_from_pkt(int n, const uint8_t *pkt, int pkt_len) {
  * ....
  * (0, 0), (0, 1), ..., (0, n)
  */
-static void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256][n], int current_get_bytes) {
+void bytes_to_onehot_image(const uint8_t *bytes, int n, unsigned char image[256][n], int current_get_bytes) {
     memset(image, 0, sizeof(unsigned char) * 256 * n); // 初始化 image 為 0
 
     /* 下面這一段將會像是 wireshark 的形式顯示 bytes 中的內容 */
