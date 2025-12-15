@@ -121,7 +121,7 @@ sudo ./Flow_Capture_v6
 
 ### 說明
 
-對於 [Flow2img_II](./Flow2img_II.c) 程式來說，他使用 [Flow2img](./Flow2img.c) 作為程式的拓展。其加上從 UNIX Domain socket (位在 `/tmp/Flow2img_Proxy.sock`) 讀取 `capture_Flow` 傳送的封包，並將 socket 設定為 non-blocking I/O 並使用 epoll 處理資料的傳入。接著建立一次性 Thread 的 HAST_TWO 程式做處理，最終將圖片、pcap、pcap 資訊記錄成同一筆 HSET 後傳送到 Redis 資料庫中。
+對於 [Flow2img_II](./Flow2img_II.c) 程式來說，他使用 [Flow2img](./Flow2img.c) 作為程式的拓展。其加上從 UNIX Domain socket (位在 `/tmp/Flow2img_Proxy.sock`) 讀取 `capture_Flow` 傳送的封包，並將 socket 設定為 non-blocking I/O 並使用 epoll 處理資料的傳入。接著建立一次性 Thread 的 HAST_TWO 或 Flow2img4 程式做處理，最終將圖片、pcap、pcap 資訊記錄成同一筆 HSET 後傳送到 Redis 資料庫中。
 
 ### 使用方式
 
@@ -134,11 +134,11 @@ sudo ./Flow_Capture_v6
 - 從 socket 讀取資料只會讀取一次
 - 頻繁的建立 Thread 將會使系統效能變慢
 
-## [HAST_Two](./HAST_Two.c)
+## RealTime_Flow2img_Convert
 
 ### 說明
 
-此程式基於 [`Flow2img_II`](./Flow2img_II.c) 為原型，對程式加上 Thread Pool、socket 讀取方式調整功能及將程式分散為 [`common.h`](./common.h)、[`main_server.c`](./main_server.c)、[`HAST_Two.c`](./HAST_Two.c)、[`redis_handler.c`](./redis_handler.c)、[`thread_pool.c`](./thread_pool.c) 的檔案中，方便後續維護程式使用。
+此程式基於 [`Flow2img_II`](./Flow2img_II.c) 為原型，對程式加上 Thread Pool、socket 讀取方式調整功能及將程式分散為 [`common.h`](./common.h)、[`main_server.c`](./main_server.c)、[`HAST_Two.c`](./HAST_Two.c)、[`redis_handler.c`](./redis_handler.c)、[`thread_pool.c`](./thread_pool.c)、[`Flow2img4.c`](./Flow2img4.c) 的檔案中，方便後續維護程式使用。
 
 Thread Pool 的相關實現可參考 [`thread_pool.c`](./thread_pool.c) 及 [`thread_pool.h`](./thread_pool.h) 中的註解。
 
@@ -149,12 +149,12 @@ socket 傳送的資料格式如下 (待補充)
 ### 使用方式
 
 ```bash
-./HAST_Two
+./RealTime_Flow2img_Convert
 ```
 
 ### 傳送端傳送 Flow2img_II_context 方式
 
-傳送端傳送一個 pcap 資料需要先後傳送兩個 socket 到 `HAST_Two` 所設定的 socket (`/tmp/Flow2img_II_Proxy.sock`)。
+傳送端傳送一個 pcap 資料需要先後傳送兩個 socket 到 `RealTime_Flow2img_Convert` 所設定的 socket (`/tmp/Flow2img_II_Proxy.sock`)。
 
 1. 紀錄 `Flow2img_II_Proxy` 結構大小的封包 (`sizeof(Flow2img_II_Proxy)`)。
 2. 傳送已經建立好的 `Flow2img_II_Proxy` 結構。
@@ -170,4 +170,3 @@ socket 傳送的資料格式如下 (待補充)
 > 因為當初設計 `Flow2img_II_Proxy` 結構的時候，因為不確定傳送端會傳送多大的 pcap 資料過來，所以設計先讀取 `pcap_size` 後再替 `pcap_data` 準備 buffer 使用。後期因為直接先定義 `pcap_data` 可用的 buffer 大小為 `sizeof(uint8_t) * MAX_PKT_LEN * N_PKTS` 個 Bytes，所以可以直接實際上該步驟並沒有實際的幫助。
 >
 > 但為使其他尚未記載的資訊可以方便先行傳送，因此目前暫時保留此傳送機制。
-
