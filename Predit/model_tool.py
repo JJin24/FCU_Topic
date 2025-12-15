@@ -23,7 +23,11 @@ def load_images_from_hset(hset: dict):
     ])
     
     processed_tensors = []  # 使用 Python list 來暫存處理好的單張圖片 Tensor
-    img_names = [f"{i}.png".encode("utf-8") for i in range(config.N_PKTS)]
+
+    if config.CONVERT_MODE == "HAST_Two":
+        img_names = [f"{i}.png".encode("utf-8") for i in range(config.N_PKTS)]
+    elif config.CONVERT_MODE == "Flow2img4":
+        img_names = [f"{i}.png".encode("utf-8") for i in range(int(config.N_PKTS / 3))]
 
     binary_data = hset.items()  # 取得 HSET 中的所有鍵值對
 
@@ -37,7 +41,10 @@ def load_images_from_hset(hset: dict):
             continue
             
         try:
-            img = Image.open(io.BytesIO(binary_data)).convert('L')
+            if config.CONVERT_MODE == "HAST_Two":
+                img = Image.open(io.BytesIO(binary_data)).convert('L')  # 轉換為灰階圖
+            elif config.CONVERT_MODE == "Flow2img4":
+                img = Image.open(io.BytesIO(binary_data)).convert('RGB') # 轉換為 RGB 圖
             
             # 應用轉換，得到一張圖片的 Tensor (shape: [C, H, W])
             tensor_img = transform(img)

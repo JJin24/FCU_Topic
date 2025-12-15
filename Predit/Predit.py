@@ -27,8 +27,13 @@ if __name__ == "__main__":
         tensor = model_tool.load_images_from_hset(hset)
 
         # 跳過所有 tensor 不足 N_PKTS 張圖片的情況
-        if tensor.numel() == 0 or tensor.shape[1] != config.N_PKTS:
-            continue
+
+        if config.CONVERT_MODE == "HAST_Two":
+            if tensor.numel() == 0 or tensor.shape[1] != config.N_PKTS:
+                continue
+        elif config.CONVERT_MODE == "Flow2img4":
+            if tensor.numel() == 0 or tensor.shape[1] != config.N_PKTS / 3:
+                continue
 
         model_predit = model_tool.model_predit(tensor, model, deveice)
 

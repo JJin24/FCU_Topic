@@ -7,6 +7,7 @@ N_PKTS =
 M_BYTES = 
 THRESHOLD =  # 預測機率的閾值
 GOOD_INDEX = 
+CONVERT_MODE = "" # 圖片轉換模式為 "HAST_Two" 還是 "Flow2img4"
 
 # 定義區 (redis_tool)
 REDIS_HOST = ''
