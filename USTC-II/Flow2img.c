@@ -591,13 +591,13 @@ int HAST_Four(const char *pcap_folder, const char *output_img_folder,\
     int n_packets = atoi(n_packets_str);
     int n_bytes = atoi(n_bytes_str);
 
-    if (n_packets % 3 != 0) {
-        fprintf(stderr, "Invalid number of n_bytes, n_bytes mod 3 must equal 0: %s, %s\n", n_packets_str, n_bytes_str);
+    if (n_packets <= 0 || n_bytes <= 0) {
+        fprintf(stderr, "Invalid number of packets or bytes: %s, %s\n", n_packets_str, n_bytes_str);
         return 1;
     }
 
-    if (n_packets <= 0 || n_bytes <= 0) {
-        fprintf(stderr, "Invalid number of packets or bytes: %s, %s\n", n_packets_str, n_bytes_str);
+    if (n_packets % 3 != 0) {
+        fprintf(stderr, "Invalid number of n_bytes, n_bytes mod 3 must equal 0: %s\n", n_packets_str);
         return 1;
     }
 
