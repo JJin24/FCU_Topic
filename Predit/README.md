@@ -11,7 +11,7 @@ apt install python3-dev libmariadb-dev
 在使用 `predit.py` 前需要建立一個 python 的虛擬環境，並且使用 `pip` 安裝以下套件
 
 ```bash
-pip install mariadb numpy Pillow redis torch torchvision
+pip install mariadb numpy Pillow redis torch torchvision requests
 ```
 
 抑或是使用
