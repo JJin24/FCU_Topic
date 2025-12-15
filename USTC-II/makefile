@@ -5,7 +5,7 @@ CFLAGS=-Wall -Wextra -O3
 LDFLAGS=-lpcap -lpthread -lhiredis -pthread -lcurl
 
 # 預設目標 'all' 依賴於我們的最終執行檔
-all: Flow2img Flow2img_II Capture_Flow HAST_Two Flow_Capture_v6
+all: Flow2img Flow2img_II Capture_Flow RealTime_Flow2img_Convert Flow_Capture_v6
 
 # 執行檔 'Flow2img' 依賴於來源檔 'Flow2img.c'
 Flow2img: Flow2img.c de_addr_noise.c
@@ -17,7 +17,7 @@ Flow2img_II: Flow2img_II.c de_addr_noise.c
 Capture_Flow: capture_Flow.c flow_tracker.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-HAST_Two: HAST_Two.c thread_pool.c main_server.c redis_handler.c de_addr_noise.c
+RealTime_Flow2img_Convert: HAST_Two.c Flow2img4.c thread_pool.c main_server.c redis_handler.c de_addr_noise.c stb_image_write_impl.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 Flow_Capture_v6: flow_capturev6.c
@@ -25,5 +25,5 @@ Flow_Capture_v6: flow_capturev6.c
 
 # 'clean' 目標，用於清除編譯產生的檔案
 clean:
-	rm -f Flow2img Capture_Flow Flow2img_II HAST_Two Flow_Capture_v6
+	rm -f Flow2img Capture_Flow Flow2img_II RealTime_Flow2img_Convert Flow_Capture_v6
 .PHONY: all clean

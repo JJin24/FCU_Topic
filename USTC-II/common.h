@@ -19,6 +19,9 @@
 #include <pthread.h>
 #include <hiredis/hiredis.h>
 
+/* 圖片轉換 define 統一定義 */
+#include "stb_image_write.h"
+
 /* Flow2img 相關定義 */
 #define N_PKTS 6
 #define M_BYTES 100

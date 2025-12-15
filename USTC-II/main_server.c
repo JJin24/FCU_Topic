@@ -1,15 +1,29 @@
 #include "common.h"
 #include "thread_pool.h"
 #include "HAST_Two.h"
+#include "Flow2img4.h"
 
 // 函式宣告
 static int create_and_bind_unix_socket();
 static void handle_new_connection(int epoll_fd, int server_fd);
 // *** MODIFIED: Added epoll_fd parameter ***
 static void handle_client_data(int epoll_fd, client_info *ci, ThreadPool *pool);
+int choose_mode();
 
+/*
+ * 建立 convert_mode 讓使用選擇要使用 HAST_Two 的模式或是 Flow2img_4 的轉換
+ * convert_mode 初始值為 0。
+ * HAST_Two 模式時，convert_mode 為 1。
+ * Flow2img_4 模式時，convert_mode 為 4。
+ */
+static int convert_mode = 0;
 
 int main() {
+    // 選擇模式
+    if(choose_mode()){
+        exit(1);
+    }
+
     // 1. 建立並綁定 Unix Domain Socket
     int server_fd = create_and_bind_unix_socket();
     if (server_fd < 0) {
@@ -255,10 +269,20 @@ static void handle_client_data(int epoll_fd, client_info *ci, ThreadPool *pool) 
                 task_arg->s_port = ntohs(task_arg->s_port);
                 task_arg->d_port = ntohs(task_arg->d_port);
 
-                if (thread_pool_add_task(pool, Flow2img_HAST_Two, task_arg) != 0) {
-                    fprintf(stderr, "Failed to add task to thread pool.\n");
-                    free(task_arg);
+                // 依據不同的 convert_mode 選不同的切換模式
+                if(convert_mode == 1){
+                    if (thread_pool_add_task(pool, Flow2img_HAST_Two, task_arg) != 0) {
+                        fprintf(stderr, "Failed to add task to thread pool.\n");
+                        free(task_arg);
+                    }
                 }
+                else if(convert_mode == 4){
+                    if (thread_pool_add_task(pool, Flow2img_4, task_arg) != 0) {
+                        fprintf(stderr, "Failed to add task to thread pool.\n");
+                        free(task_arg);
+                    }
+                }
+                
 
                 ci->state = STATE_READ_HEADER;
                 ci->to_read = sizeof(uint32_t);
@@ -279,4 +303,24 @@ close_conn:
     close(ci->fd);
     free(ci->buffer);
     free(ci);
+}
+
+int choose_mode(){
+    while(convert_mode != 1 && convert_mode != 4){
+        if(convert_mode){
+            printf("\n無效輸入！\n");
+        }
+        printf("- HAST_Two 模式請輸入 1\n- Flow2img_4 模式請輸入 4\n- 輸入 0 退出程式\n\n  請輸入選擇模式：");
+        if(scanf("%d", &convert_mode) != 1){
+            convert_mode = 99;
+            // 清空輸入緩衝區中殘留的字元 (例如 'd' 和 '\n')
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF);
+        }
+        if(!convert_mode){
+            return 1;
+        }
+    }
+
+    return 0;
 }
