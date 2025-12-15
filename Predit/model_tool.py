@@ -137,7 +137,7 @@ def save_results(rDB, mDB, result, hset):
                 'label': str(pred_class)
             }
             mariadb_tool.insert_data(mDB, 'alert_history', alert_data)
-            predit_api.send_alert_notification(str(pred_class), metadata.get('d_ip') + ':' + metadata.get('d_port'),
+            predit_api.send_alert_notification(str(pred_class), metadata.get('d_ip'), metadata.get('d_port'),
                                     metadata.get('timestamp'), str(score))
 
     except Exception as e:

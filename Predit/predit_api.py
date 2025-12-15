@@ -7,7 +7,7 @@ from datetime import *
 
 last_time = datetime.strptime('1970-01-01 00:00:00', "%Y-%m-%d %H:%M:%S")
 
-def send_alert_notification(label, dst_ip, timestamp, score):
+def send_alert_notification(label, dst_ip, dst_port, timestamp, score):
     # 說明 last_time 為全域變數
     global last_time
 
@@ -21,7 +21,7 @@ def send_alert_notification(label, dst_ip, timestamp, score):
         data = {
             'label': label_name,
             'hostName': hostname,
-            'dst_ip': dst_ip,
+            'dst_ip': dst_ip + ':' + dst_port,
             'timestamp': timestamp,
             'score': score
         }
