@@ -69,8 +69,7 @@ async function getHostStatus() {
     const hostStatus = await conn.query(
       "SELECT location, \
       SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS nornal, \
-      SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS warn, \
-      SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS alert \
+      SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS alert \
       FROM host GROUP BY location;"
     );
     console.log(hostStatus);
@@ -301,22 +300,25 @@ async function getAllFlowCountByLocationAndHost() {
     // 2. SQL 查詢：將 '資電大樓' 替換為 '?'
     const sql = `
       SELECT
-          h.name,
-          h.location,
-          h.ip,
-          h.importance,
+          COALESCE(h_dst.name, h_src.name) AS name,
+          COALESCE(h_dst.location, h_src.location) AS location,
+          COALESCE(h_dst.ip, h_src.ip) AS ip,
+          COALESCE(h_dst.importance, h_src.importance) AS importance,
           ah.label AS attack_label,
           COUNT(*) AS attack_count
       FROM
           flow AS f
       JOIN
           alert_history AS ah ON f.id = ah.id
-      JOIN
-          host AS h ON f.dst_ip = h.ip
+      LEFT JOIN
+          host AS h_dst ON f.dst_ip = h_dst.ip
+      LEFT JOIN
+          host AS h_src ON f.src_ip = h_src.ip
       WHERE
           f.timestamp >= '2025-09-07 17:45:30'
+          AND (h_dst.ip IS NOT NULL OR h_src.ip IS NOT NULL)
       GROUP BY
-          h.name, h.location, h.ip, h.importance, ah.label
+          name, location, ip, importance, ah.label
       ORDER BY
           attack_count DESC;
     `;

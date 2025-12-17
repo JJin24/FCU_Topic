@@ -66,13 +66,15 @@ async function getAttackTypesByLocation(location) {
           flow AS f
       JOIN
           alert_history AS ah ON f.id = ah.id
-      JOIN
-          host AS h ON f.dst_ip = h.ip
+      LEFT JOIN
+        host AS h_dst ON f.dst_ip = h_dst.ip
+      LEFT JOIN
+        host AS h_src ON f.src_ip = h_src.ip
       JOIN
           label_list AS ll ON ah.label = ll.label_id
       WHERE
           f.timestamp >= NOW() - INTERVAL 1 HOUR
-          AND h.location = ?
+          AND (h_dst.location = ? OR h_src.location = ?)
       ORDER BY
           ah.label;
     `;
@@ -119,13 +121,15 @@ async function getAttackTypesByLocation(location) {
           flow AS f
       JOIN
           alert_history AS ah ON f.id = ah.id
-      JOIN
-          host AS h ON f.dst_ip = h.ip
+      LEFT JOIN
+          host AS h_dst ON f.dst_ip = h_dst.ip
+      LEFT JOIN
+          host AS h_src ON f.src_ip = h_src.ip
       JOIN
           label_list AS ll ON ah.label = ll.label_id
       WHERE
           f.timestamp >= '2025-09-07 17:45:30'
-          AND h.location = ?
+          AND (h_dst.location = ? OR h_src.location = ?)
       GROUP BY
           ah.label, ll.name
       ORDER BY
@@ -133,7 +137,7 @@ async function getAttackTypesByLocation(location) {
     `;
     
     // 3. 準備參數
-    const params = [ location ];
+    const params = [ location, location ];
     
     // 4. 執行查詢
     const rows = await conn.query(sql, params); 
