@@ -395,7 +395,7 @@ async function setMalHost(host) {
     const res = await conn.query(
       "UPDATE host \
       SET status = 1 \
-      WHERE hostname = ?;",
+      WHERE name = ?;",
       [host]
     );
     console.log(res);
@@ -417,7 +417,7 @@ async function setGoodHost(host) {
     const res = await conn.query(
       "UPDATE host \
       SET status = 0 \
-      WHERE hostname = ?;",
+      WHERE name = ?;",
       [host]
     );
     console.log(res);
