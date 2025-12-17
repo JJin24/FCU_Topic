@@ -65,7 +65,8 @@ async function getNotDealAlert(){
       LEFT JOIN protocol_list ON flow.protocol = protocol_list.protocol \
       LEFT JOIN HostIPToNameMap AS h_src ON flow.src_ip = h_src.ip \
       LEFT JOIN HostIPToNameMap AS h_dst ON flow.dst_ip = h_dst.ip \
-      WHERE ah.status = 0;"
+      WHERE ah.status = 0 \
+      ORDER BY flow.timestamp DESC;" 
     );
     console.log(topXDayFlow);
     return topXDayFlow;
