@@ -691,6 +691,10 @@ router.get('/allalertflowcount', hostController.handleAllAlertFlowCount);
 
 router.get('/SpecifiedTimeAlertFlowCount', hostController.handleSpecifiedTimeAlertFlowCount);
 
+router.get('/setMalHost', hostController.handleSetMalHost);
+
+router.get('/setGoodHost', hostController.handleSetGoodHost);
+
 module.exports = router;
 
 /**

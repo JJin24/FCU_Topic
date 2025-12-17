@@ -240,6 +240,31 @@ const handleSpecifiedTimeAlertFlowCount = async (req, res) => {
   }
 };
 
+const handleSetMalHost = async (req, res) => {
+  const { host } = req.params;
+  console.log("Find ip: ", host, "'s host info.");
+  const res = await hostService.setMalHost(host);
+
+  if (res) {
+    res.json("Success set host to malicious");
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve host data' });
+  }
+};
+
+const handleSetGoodHost = async (req, res) => {
+  const { host } = req.params;
+  console.log("Find ip: ", host, "'s host info.");
+  const res = await hostService.setGoodHost(host);
+
+  if (res) {
+    res.json("Success set host to good");
+  }
+  else {
+    res.status(404).json({ title: '404 Not Found', message: 'Failed to retrieve host data' });
+  }
+};
 
 module.exports = {
   handleGetAllHost,
@@ -252,5 +277,7 @@ module.exports = {
   handleGetSearchHistory,
   handleHourlyAlertFlowCount,
   handleAllAlertFlowCount,
-  handleSpecifiedTimeAlertFlowCount
+  handleSpecifiedTimeAlertFlowCount,
+  handleSetMalHost,
+  handleSetGoodHost
 };

@@ -387,6 +387,50 @@ async function getSpecifiedTimeFlowCount(startTime, endTime) {
   }
 };
 
+async function setMalHost(host) {
+  var conn;
+  try{
+    conn = await pool.getConnection();
+
+    const res = await conn.query(
+      "UPDATE host \
+      SET status = 1 \
+      WHERE hostname = ?;",
+      [host]
+    );
+    console.log(res);
+    return res;
+  }
+  catch(err){
+    console.error('Error in setMalHost', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+};
+
+async function setGoodHost(host) {
+  var conn;
+  try{
+    conn = await pool.getConnection();
+
+    const res = await conn.query(
+      "UPDATE host \
+      SET status = 0 \
+      WHERE hostname = ?;",
+      [host]
+    );
+    console.log(res);
+    return res;
+  }
+  catch(err){
+    console.error('Error in setGoodHost', err);
+  }
+  finally {
+    if (conn) conn.release(); // 釋放連線
+  }
+};
+
 module.exports = {
   getAllHost,
   getHostByIP,
@@ -401,6 +445,8 @@ module.exports = {
   getSearchHistory,
   getHourlyFlowCountByLocationAndHost,
   getAllFlowCountByLocationAndHost,
-  getSpecifiedTimeFlowCount
+  getSpecifiedTimeFlowCount,
+  setMalHost,
+  setGoodHost
 };
 
