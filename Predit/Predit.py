@@ -5,6 +5,7 @@ import model_tool
 import model_architectures
 import torch
 import time
+import json
 
 if __name__ == "__main__":
     deveice = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -36,5 +37,14 @@ if __name__ == "__main__":
                 continue
 
         model_predit = model_tool.model_predit(tensor, model, deveice)
+
+        mDB = mariadb_tool.check_connection(mDB)
+
+        # Pass 所有上傳到雲端 API 的流量
+        metadata = hset.get('metadata'.encode("utf-8")).decode("utf-8")
+        metadata = json.loads(metadata) # 轉換成字典格式
+        if metadata.get('d_ip') == config.WHITHELIST_IP or metadata.get('d_ip') == config.WHITHELIST_IP:
+            print("跳過白名單流量...")
+            continue
 
         model_tool.save_results(rDB, mDB, model_predit, hset)
