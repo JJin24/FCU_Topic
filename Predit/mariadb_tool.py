@@ -19,6 +19,25 @@ def connect_to_mariadb():
     except mariadb.Error as e:
         print(f"無法連線至 MariaDB，請檢查您的資料庫設定。錯誤訊息: {e}")
         return None
+
+def check_connection(conn):
+    """
+    檢查 MariaDB 連線狀態，如果中斷則嘗試重新連線
+    :param conn: MariaDB 連接物件
+    :return: 有效的 MariaDB 連接物件
+    """
+    try:
+        if conn is None:
+            print("MariaDB 連線物件為空，嘗試建立新連線...")
+            return connect_to_mariadb()
+        conn.ping()
+        return conn
+    except mariadb.Error as e:
+        print(f"檢測到 MariaDB 連線異常 ({e})，正在重新連線...")
+        return connect_to_mariadb()
+    except Exception as e:
+        print(f"發生未預期錯誤 ({e})，嘗試重新連線...")
+        return connect_to_mariadb()
     
 
 def insert_data(conn, table, data):
