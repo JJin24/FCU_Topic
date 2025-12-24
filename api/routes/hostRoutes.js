@@ -691,8 +691,82 @@ router.get('/allalertflowcount', hostController.handleAllAlertFlowCount);
 
 router.get('/SpecifiedTimeAlertFlowCount', hostController.handleSpecifiedTimeAlertFlowCount);
 
+/**
+ * @swagger
+ * /host/setMalHost/{host}:
+ *   get:
+ *     summary: 設定主機狀態為惡意 (Malicious)
+ *     description: 根據提供的主機名稱，將該主機的狀態更新為 1 (惡意/異常)。
+ *     tags: [host]
+ *     parameters:
+ *       - in: path
+ *         name: host
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 要設定的主機名稱
+ *         example: "Main-Server"
+ *     responses:
+ *       200:
+ *         description: 成功設定主機狀態為惡意。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *               example: "Success set host to malicious"
+ *       404:
+ *         description: Failed to retrieve host data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve host data
+ */
 router.get('/setMalHost/:host', hostController.handleSetMalHost);
 
+/**
+ * @swagger
+ * /host/setGoodHost/{host}:
+ *   get:
+ *     summary: 設定主機狀態為正常 (Good)
+ *     description: 根據提供的主機名稱，將該主機的狀態更新為 0 (正常)。
+ *     tags: [host]
+ *     parameters:
+ *       - in: path
+ *         name: host
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: 要設定的主機名稱
+ *         example: "Main-Server"
+ *     responses:
+ *       200:
+ *         description: 成功設定主機狀態為正常。
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *               example: "Success set host to good"
+ *       404:
+ *         description: Failed to retrieve host data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 title:
+ *                   type: string
+ *                   example: 404 Not Found
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve host data
+ */
 router.get('/setGoodHost/:host', hostController.handleSetGoodHost);
 
 module.exports = router;
