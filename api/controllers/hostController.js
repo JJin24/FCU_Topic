@@ -243,9 +243,9 @@ const handleSpecifiedTimeAlertFlowCount = async (req, res) => {
 const handleSetMalHost = async (req, res) => {
   const { host } = req.params;
   console.log("Find ip: ", host, "'s host info.");
-  const res = await hostService.setMalHost(host);
+  const res_1 = await hostService.setMalHost(host);
 
-  if (res) {
+  if (res_1) {
     res.json("Success set host to malicious");
   }
   else {
@@ -256,9 +256,9 @@ const handleSetMalHost = async (req, res) => {
 const handleSetGoodHost = async (req, res) => {
   const { host } = req.params;
   console.log("Find ip: ", host, "'s host info.");
-  const res = await hostService.setGoodHost(host);
+  const res_1 = await hostService.setGoodHost(host);
 
-  if (res) {
+  if (res_1) {
     res.json("Success set host to good");
   }
   else {
