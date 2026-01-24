@@ -24,14 +24,14 @@ async function getOneHourSum() {
   }
 }
 
-async function insertTraffic(interval_seconds, bytes) {
+async function insertTraffic(src_ip,interval_seconds, bytes) {
   var conn;
   try {
     conn = await pool.getConnection();
     // Insert into traffic_table. Assumes table has columns: traffic (BIGINT), interval_seconds (INT), timestamp (DATETIME default NOW())
     const res = await conn.query(
-      `INSERT INTO traffic_table (traffic, interval_seconds, timestamp) VALUES (?, ?, NOW())`,
-      [bytes, interval_seconds]
+      `INSERT INTO traffic_table (ip,traffic, interval_seconds, timestamp) VALUES (?, ?, ?, NOW())`,
+      [src_ip,bytes, interval_seconds]
     );
     return true;
   } catch (err) {

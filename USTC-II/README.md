@@ -1,6 +1,6 @@
 # USTC-II 相關程式內容
 
-目前使用 `make` 指令將會編譯出 5 個程式，分別是 Flow2img、Flow2img_II、Capture_Flow、RealTime_Flow2img_Convert、Flow_Capture_v6。相關程式碼的功能及用途如下。
+目前使用 `make` 指令將會編譯出 5 個程式，分別是 Flow2img、Flow2img_II、Capture_Flow、RealTime_Flow2img_Convert、Flow_Capture_v7。相關程式碼的功能及用途如下。
 
 ## 使用的第三方套件與授權
 
@@ -47,6 +47,7 @@ make
 
 - 主程式先建立2個 pthread : `traffic_monitor_thread` 、 `flow_timeout_checker_thread`; 在進入`pcap_loop`去讀取網卡並透過`packet_handler`處理封包
 - `traffic_monitor_thread` 利用總流量及上次統計的流量去得到最近 `TRAFFIC_MONITOR_INTERVAL` 秒內的流量大小，並顯示出來
+- `send_traffic_to_api` 傳送統計流量大小置資料庫，相較v6，增加網卡ip的傳送，以分辨監測基所在區網
 - `flow_timeout_checker_thread` 會檢查`現在時間-Flow最後收包時間`是否大於`FLOW_TIMEOUT_SECONDS`，若 Timeout ，則將 Flow 資料及 pcap 檔傳送至指定的 Socket 
 - `packet_handler` 每收到一個封包，就會為該封包建立一個新的 detached 執行緒來處理，使各個執行緒互不影響。透過 `header->len` 統計蒐集的「總流量大小」，以便 `traffic_monitor_thread` 計算。在此分析五元組，並將Flow的五元組加時間戳作為Flow的名字，檢查該Flow是否存在過，若無則建立 Flow 結構並初始化
 
@@ -55,7 +56,7 @@ make
 
 - 使用時須提高權限
 ```base
-sudo ./Flow_Capture_v6
+sudo ./Flow_Capture_v7
 ```
 - 根據顯示的網卡做選擇(輸入數字)
 `dev_num` :根據提示，手動輸入要監聽的網卡編號
