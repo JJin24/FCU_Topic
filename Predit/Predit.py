@@ -43,7 +43,7 @@ if __name__ == "__main__":
         # Pass 所有上傳到雲端 API 的流量
         metadata = hset.get('metadata'.encode("utf-8")).decode("utf-8")
         metadata = json.loads(metadata) # 轉換成字典格式
-        if metadata.get('d_ip') == config.WHITHELIST_IP or metadata.get('d_ip') == config.WHITHELIST_IP:
+        if metadata.get('d_ip') in config.WHITHELIST_IP or metadata.get('d_ip') in config.WHITHELIST_IP:
             print("跳過白名單流量...")
             continue
 
